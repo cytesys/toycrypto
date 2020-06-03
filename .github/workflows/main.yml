@@ -15,9 +15,9 @@ jobs:
       - name: Run CMake
         uses: lukka/run-cmake@v2.5
         with: 
-          cmakeListsTxtPath: ${{ github.repository }}/CMakeLists.txt
-          buildDirectory: ${{ github.repository }}/build
+          cmakeListsTxtPath: CMakeLists.txt
+          buildDirectory: build
       - name: Build
-        run: cd ${{ github.repository }} && make
+        run: cd build && make
       - name: Test
-        run: cd ${{ github.repository }} && make test
+        run: cd build && make test
