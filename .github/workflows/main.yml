@@ -12,10 +12,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Build and test
-        uses: ashutoshvarma/action-cmake-build@master
-        with:
-          build-dir: ${{runner.workspace}}/build
-          build-type: Release
-          cxx: g++
-          run-test: true
+      - name: Run CMake
+        uses: lukka/run-cmake@v2.5
+        with: 
+          cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
+          buildDirectory: ${{ github.workspace }}/build
+      - name: Build
+        run: make
+      - name: Test
+        run: make test
