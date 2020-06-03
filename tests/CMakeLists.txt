@@ -5,7 +5,7 @@ file(GLOB files "test_*.cpp")
 
 foreach(file ${files})
 	string(REGEX REPLACE "(^.*/|\\.[^.]*$)" "" file_without_ext ${file})
-	add_executable(${file_without_ext} ${file} common_test.hpp common_test.cpp)
+	add_executable(${file_without_ext} ${file})
 	target_link_libraries(${file_without_ext} cryptotest)
 	
 	if(${file_without_ext} MATCHES "_file$")
