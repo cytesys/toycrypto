@@ -12,12 +12,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
       - name: Run CMake
         uses: lukka/run-cmake@v2.5
         with: 
-          cmakeListsTxtPath: CMakeLists.txt
-          buildDirectory: build
+          cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
+          buildDirectory: ${{ github.workspace }}/build
       - name: Build
-        run: cd build && make
+        run: cd ${{ github.workspace }}/build && make
       - name: Test
-        run: cd build && make test
+        run: cd ${{ github.workspace }}/build && make test
