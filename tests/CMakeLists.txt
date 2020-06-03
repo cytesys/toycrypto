@@ -23,12 +23,4 @@ foreach(file ${files})
 	set_tests_properties(${file_without_ext}
 		PROPERTIES
 		TIMEOUT 120)
-	
-	add_custom_command(
-		TARGET ${file_without_ext}
-		COMMENT "Run tests"
-		POST_BUILD 
-		WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests
-		COMMAND ${CMAKE_CTEST_COMMAND} -R "\^${file_without_ext}$$" --output-on-failures
-	)
 endforeach()
