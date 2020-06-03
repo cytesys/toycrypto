@@ -19,7 +19,5 @@ jobs:
         with: 
           cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
           buildDirectory: ${{ github.workspace }}/build
-      - name: Build
-        run: cd ${{ github.workspace }}/build && make
       - name: Test
-        run: cd ${{ github.workspace }}/build && make test
+        run: cd ${{ github.workspace }}/build && ctest
