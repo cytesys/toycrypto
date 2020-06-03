@@ -1,3 +1,4 @@
 doxygen_config
-out
 CMakeSettings.json
+.vs
+out
