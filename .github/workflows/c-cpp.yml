@@ -12,10 +12,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: configure
-      run: mkdir build && cd ./build && cmake ..
-    - name: make
-      run: make
-    - name: run tests
-      run: make test
+      - name: Build CMake
+        uses: ashutoshvarma/action-cmake-build@v1
+        with:
+          build-dir: ${{ runner.workspace }}/build
+          build-type: Release
+          run-test: true
