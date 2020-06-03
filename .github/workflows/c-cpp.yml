@@ -17,4 +17,5 @@ jobs:
         with:
           build-dir: ${{ runner.workspace }}/build
           build-type: Release
+          cxx: g++
           run-test: true
