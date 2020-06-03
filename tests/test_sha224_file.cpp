@@ -1,11 +1,11 @@
 #include <cstdio>
 #include <string>
 #include <sha.hpp>
-#include "common_test.hpp"
+//#include "common_test.hpp"
 
 int main(int argc, char** argv) {
-	generate_test_file();
-	std::string filename = "testfile.txt";
+	//generate_test_file();
+	std::string filename = argv[1];
 	std::string expected = "85e21930780474a8feef56f5bea9ab664eaf5cab967430c144a69636";
 	
 	if (SHA::sha224_file(filename).compare(expected) != 0) {
