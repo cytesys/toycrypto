@@ -8,7 +8,7 @@ foreach(file ${files})
 	add_executable(${file_without_ext} ${file} common_test.hpp common_test.cpp)
 	target_link_libraries(${file_without_ext} cryptotest)
 	
-	if(${file_without_ext} MATCHES "file$")
+	if(${file_without_ext} MATCHES "_file$")
 		add_test(${file_without_ext} ${file_without_ext} ${PROJECT_SOURCE_DIR}/tests/testfile.txt)
 	else()
 		add_test(${file_without_ext} ${file_without_ext})
@@ -29,6 +29,6 @@ foreach(file ${files})
 		COMMENT "Run tests"
 		POST_BUILD 
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests
-		COMMAND ${CMAKE_CTEST_COMMAND} -R "^${file_without_ext}$" --output-on-failures
+		COMMAND ${CMAKE_CTEST_COMMAND} -R "\^${file_without_ext}\$" --output-on-failures
 	)
 endforeach()
