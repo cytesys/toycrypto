@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Build CMake
-        uses: ashutoshvarma/action-cmake-build@v1
+        uses: cytesys/toycrypto@master
         with:
           build-dir: ${{ runner.workspace }}/build
           build-type: Release
