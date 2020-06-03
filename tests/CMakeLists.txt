@@ -29,6 +29,6 @@ foreach(file ${files})
 		COMMENT "Run tests"
 		POST_BUILD 
 		WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/tests
-		COMMAND ${CMAKE_CTEST_COMMAND} -R "\^${file_without_ext}\$" --output-on-failures
+		COMMAND ${CMAKE_CTEST_COMMAND} -R "\^${file_without_ext}$$" --output-on-failures
 	)
 endforeach()
