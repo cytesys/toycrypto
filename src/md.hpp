@@ -6,7 +6,7 @@
 #include <string>
 
 namespace MD {
-	std::string md2(std::string input);
+	auto md2(const std::string &input) -> std::string;
 	std::string md4(std::string input);
 }
 

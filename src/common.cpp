@@ -21,6 +21,10 @@ auto chars_to_uint64_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, ui
 	return (t0 << BYTE * 4) | t1;
 }
 
+auto leftrotate(uint8_t a, unsigned int num) -> uint8_t {
+	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
+}
+
 auto leftrotate(uint32_t a, unsigned int num) -> uint32_t {
 	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
 }
@@ -107,6 +111,14 @@ static auto nibble_to_hex(uint8_t nibble) -> std::string {
 			return "?";
 			break;
 	}
+}
+
+auto uint_to_hex(uint8_t a) -> std::string {
+	std::string result = "";
+	for (int i = NIBBLE; i <= sizeof(a) * BYTE; i += NIBBLE) {
+		result += nibble_to_hex(leftrotate(a, i) & 0xf);
+	}
+	return result;
 }
 
 auto uint_to_hex(uint32_t a) -> std::string {
