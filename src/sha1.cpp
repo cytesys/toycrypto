@@ -127,9 +127,12 @@ void SHA01::load_file(const std::string &filename) {
 	unsigned int index;
 	
 	// Open file
-	std::ifstream infile;
-	infile.open(filename, std::ifstream::binary);
+	std::ifstream infile(filename, std::ifstream::binary);
 	
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
 	// Get length
 	infile.seekg (0, infile.end);
     std::streamoff filelen = infile.tellg();

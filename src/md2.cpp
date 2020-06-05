@@ -1,6 +1,8 @@
 #include <cstdint>
 #include <string>
 #include <array>
+#include <fstream>
+#include <exception>
 #include "common.cpp"
 
 constexpr std::array<uint8_t, 256> S = {
@@ -51,8 +53,62 @@ private:
 public:
 	MD2() {};
 	void load_string(const std::string &input);
+	void load_file(const std::string &filename);
 	auto output() -> std::string;
 };
+
+void MD2::load_file(const std::string& filename) {
+	_offset = 0;
+	char* buffer = new char[16];
+
+	std::ifstream infile(filename, std::ifstream::binary);
+
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
+	infile.seekg(0, infile.end);
+	std::streamoff filelen = infile.tellg();
+	infile.seekg(0, infile.beg);
+
+	while ((filelen - _offset) >= 16) {
+		// Load 16 bytes into the chunk
+		infile.read(buffer, 16);
+		for (unsigned int i = 0; i < 16; i++) {
+			_chunk.at(i) = buffer[i];
+		}
+
+		_checksum_round();
+		_handle();
+
+		_offset += 16;
+	}
+
+	// Load the rest of the input into the chunk
+	unsigned int index = 0;
+	infile.read(buffer, filelen % 16);
+
+	for (unsigned int i = 0; i < (filelen % 16); i++) {
+		_chunk.at(i) = buffer[i];
+		index++;
+	}
+
+	// Apply padding
+	uint8_t rounds = 16 - (filelen % 16);
+	for (unsigned int i = 0; i < rounds; i++) {
+		_chunk.at(index++) = rounds;
+	}
+
+	_checksum_round();
+	_handle();
+
+	// Apply checksum
+	for (unsigned int i = 0; i < 16; i++) {
+		_chunk.at(i) = _C[i];
+	}
+
+	_handle();
+}
 
 void MD2::load_string(const std::string &input) {
 	_offset = 0;
@@ -133,6 +189,12 @@ namespace MD {
 	auto md2(const std::string& input) -> std::string {
 		MD2 inst = MD2();
 		inst.load_string(input);
+		return inst.output();
+	}
+
+	auto md2_file(const std::string& filename) -> std::string {
+		MD2 inst = MD2();
+		inst.load_file(filename);
 		return inst.output();
 	}
 }
