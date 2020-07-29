@@ -40,14 +40,14 @@ int main(int argc, char** argv) {
 			if (argc > 3) {
 				printf("%s\n", SHA::shake128(argv[2], atoi(argv[3])).c_str());
 			} else {
-				printf("Error: You must provide a length for shake128!\n");
+				printf("Error: You must provide an output length for shake128!\n");
 				return 1;
 			}
 		} else if (strcmp(argv[1], "shake256") == 0) {
 			if (argc > 3) {
 				printf("%s\n", SHA::shake256(argv[2], atoi(argv[3])).c_str());
 			} else {
-				printf("Error: You must provide a length for shake256!\n");
+				printf("Error: You must provide an output length for shake256!\n");
 				return 1;
 			}
 		} else if (strcmp(argv[1], "sha3-224") == 0) {
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 			return 1;
 		}
 	} else {
-		printf("Usage: %s <hash_method> <string_to_be_hashed> [output_length]\n", argv[0]);
+		printf("Usage: <hash_method> <string_to_be_hashed> [output_length]\n");
 	}
 
 	return 0;
