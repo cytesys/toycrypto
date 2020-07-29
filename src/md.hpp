@@ -10,6 +10,7 @@ namespace MD {
 	auto md2_file(const std::string &filename) -> std::string;
 
 	auto md4(const std::string &input) -> std::string;
+	auto md4_file(const std::string& filename)->std::string;
 }
 
 #endif

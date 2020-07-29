@@ -2,7 +2,6 @@
 #include <string>
 #include <array>
 #include <fstream>
-#include <exception>
 #include "common.cpp"
 
 constexpr std::array<uint8_t, 256> S = {

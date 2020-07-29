@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <stdexcept>
+#include <fstream>
 #include "common.hpp"
 
 
@@ -45,6 +46,7 @@ private:
 public:
 	MD4() {};
 	void load_string(const std::string& input);
+	void load_file(const std::string& filename);
 	auto output()->std::string;
 };
 
@@ -159,6 +161,126 @@ void MD4::load_string(const std::string& input) {
 	_handle();
 }
 
+void MD4::load_file(const std::string &filename) {
+	_offset = 0;
+	char* buffer = new char[64];
+	unsigned int index;
+	unsigned int buffer_index;
+
+	std::ifstream infile(filename, std::ifstream::binary);
+
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
+	infile.seekg(0, infile.end);
+	std::streamoff filelen = infile.tellg();
+	infile.seekg(0, infile.beg);
+
+	_ml = filelen * 8;
+
+	while ((filelen - _offset) >= 64) {
+		// Load 16 bytes into the chunk
+		if (!infile.good()) {
+			throw std::ios_base::failure("Could not open file!");
+		}
+
+		infile.read(buffer, 64);
+
+		for (unsigned int i = 0; i < 16; i++) {
+			_X.at(i) = chars_to_uint32_t(
+				buffer[(i * 4) + 3],
+				buffer[(i * 4) + 2],
+				buffer[(i * 4) + 1],
+				buffer[(i * 4)]
+			);
+		}
+
+		_handle();
+
+		_offset += 64;
+	}
+
+	index = 0;
+	buffer_index = 0;
+
+	// Load the remaining whole 32-bit words from input
+	if ((filelen - _offset) > 0) {
+		if (!infile.good()) {
+			throw std::ios_base::failure("Could not open file!");
+		}
+
+		infile.read(buffer, (filelen - _offset));
+
+		if ((filelen - _offset) >= 4) {
+			int rem_whole = std::floor((filelen - _offset) / 4);
+			int new_offset = _offset;
+
+			for (int i = 0; i < (rem_whole * 4); i += 4) {
+				_X.at(index++) = chars_to_uint32_t(
+					buffer[i + 3],
+					buffer[i + 2],
+					buffer[i + 1],
+					buffer[i]
+				);
+
+				new_offset += 4;
+				buffer_index += 4;
+			}
+			_offset = new_offset;
+		}
+	}
+
+	switch ((filelen - _offset)) {
+	case 0:
+		_X.at(index++) = chars_to_uint32_t(
+			0x00,
+			0x00,
+			0x00,
+			0x80
+		);
+		break;
+	case 1:
+		_X.at(index++) = chars_to_uint32_t(
+			0x00,
+			0x00,
+			0x80,
+			buffer[buffer_index]
+		);
+		break;
+	case 2:
+		_X.at(index++) = chars_to_uint32_t(
+			0x00,
+			0x80,
+			buffer[buffer_index + 1],
+			buffer[buffer_index]
+		);
+		break;
+	case 3:
+		_X.at(index++) = chars_to_uint32_t(
+			0x80,
+			buffer[buffer_index + 2],
+			buffer[buffer_index + 1],
+			buffer[buffer_index]
+		);
+		break;
+	default:
+		throw std::runtime_error("This should not happen. Error in the switch in funtion MD2::load_string()!");
+		break;
+	}
+
+	// Pad with zeroes
+	while (index + 2 < 16) {
+		_X.at(index++) = chars_to_uint32_t(0x00, 0x00, 0x00, 0x00);
+	}
+
+	// Append the message length
+	_X.at(index++) = _ml & 0xffffffff;
+	_X.at(index++) = leftrotate(_ml, 32) & 0xffffffff;
+
+	_handle();
+}
+
 void MD4::_handle() {
 	//_debug();
 
@@ -240,6 +362,12 @@ namespace MD {
 	auto md4(const std::string& input) {
 		MD4 instance = MD4();
 		instance.load_string(input);
+		return instance.output();
+	}
+
+	auto md4_file(const std::string& filename) {
+		MD4 instance = MD4();
+		instance.load_file(filename);
 		return instance.output();
 	}
 }
