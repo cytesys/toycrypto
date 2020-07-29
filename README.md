@@ -1,7 +1,8 @@
 # toycrypto
 ![C/C++ CI](https://github.com/cytesys/toycrypto/workflows/C/C++%20CI/badge.svg?branch=master)
 ## Introduction
-This is a toy crypto library in C++ in the making. It has no dependencies, and should work on any platform (that has C++ standard libraries). This project has an executable (bin.exe), mostly for testing purposes, and CMake tests for every crypto function.
+This is a toy crypto library in C++ in the making. It has no dependencies, and should work on any platform (that has C++ standard libraries).
+This project has an executable (bin.exe), mostly for testing purposes, and CMake tests for every crypto- and helper function.
 
 ## Currently implemented cryptographic functions
 *So far, only cryptographic hashing functions are implemented.*
