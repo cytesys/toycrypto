@@ -143,6 +143,10 @@ void SHA01::load_file(const std::string &filename) {
 	// Handle each chunk of the input
 	while ((filelen - _offset) >= CHUNK_SIZE_BYTES) {
 		// Load bytes from input into the buffer
+		if (!infile.good()) {
+			throw std::ios_base::failure("Could not open file!");
+		}
+
 		infile.read(buffer, CHUNK_SIZE_BYTES);
 		
 		// Load bytes from buffer into chunk
@@ -158,6 +162,10 @@ void SHA01::load_file(const std::string &filename) {
 	}
 	
 	// Load the rest of the input into buffer
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
 	infile.read(buffer, filelen % CHUNK_SIZE_BYTES);
 	
 	// Load bytes from buffer into chunk

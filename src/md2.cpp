@@ -73,7 +73,12 @@ void MD2::load_file(const std::string& filename) {
 
 	while ((filelen - _offset) >= 16) {
 		// Load 16 bytes into the chunk
+		if (!infile.good()) {
+			throw std::ios_base::failure("Could not open file!");
+		}
+
 		infile.read(buffer, 16);
+		
 		for (unsigned int i = 0; i < 16; i++) {
 			_chunk.at(i) = buffer[i];
 		}
@@ -86,6 +91,11 @@ void MD2::load_file(const std::string& filename) {
 
 	// Load the rest of the input into the chunk
 	unsigned int index = 0;
+
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
 	infile.read(buffer, filelen % 16);
 
 	for (unsigned int i = 0; i < (filelen % 16); i++) {
@@ -157,7 +167,7 @@ void MD2::_checksum_round() {
 }
 
 void MD2::_handle() {
-	for (unsigned int j = 0; j < 16; j++) {
+	for (uint64_t j = 0; j < 16; j++) {
 		_X.at(16 + j) = _chunk.at(j);
 		_X.at(32 + j) = _X.at(16 + j) ^ _X.at(j);
 	}

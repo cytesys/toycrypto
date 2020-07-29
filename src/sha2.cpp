@@ -176,6 +176,10 @@ void SHA2_32::load_file(const std::string &filename) {
 	
 	// Handle each chunk of the input
 	while ((filelen - _offset) >= CHUNK32_SIZE_BYTES) {
+		if (!infile.good()) {
+			throw std::ios_base::failure("Could not open file!");
+		}
+
 		// Load bytes from input into the buffer
 		infile.read(buffer, CHUNK32_SIZE_BYTES);
 		
@@ -192,6 +196,10 @@ void SHA2_32::load_file(const std::string &filename) {
 	}
 	
 	// Load the rest of the input into buffer
+	if (!infile.good()) {
+		throw std::ios_base::failure("Could not open file!");
+	}
+
 	infile.read(buffer, filelen % CHUNK32_SIZE_BYTES);
 	
 	// Load bytes from buffer into chunk
