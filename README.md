@@ -15,4 +15,4 @@ This project has an executable (bin.exe), mostly for testing purposes, and CMake
 - [ ] MD5
 
 ---
-*This library is not meant to be used seriously, this is just me learning about crypto, C++, CMake and GitHub.*
+***This library is not meant to be used seriously, this is just me learning about crypto, C++, CMake and GitHub.***
