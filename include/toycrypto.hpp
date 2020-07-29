@@ -38,8 +38,10 @@ namespace SHA {
 }
 
 namespace MD {
-	std::string md2(std::string input);
-	std::string md4(std::string input);
+	auto md2(const std::string& input)->std::string;
+	auto md2_file(const std::string& filename)->std::string;
+
+	auto md4(const std::string& input)->std::string;
 }
 
 #endif
