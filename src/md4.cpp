@@ -2,8 +2,9 @@
 #include <string>
 #include <array>
 #include <cmath>
-#include <exception>
+#include <stdexcept>
 #include "common.hpp"
+
 
 static uint32_t F(uint32_t x, uint32_t y, uint32_t z) {
 	return ((x & y) | ((~x) & z));
@@ -40,7 +41,7 @@ private:
 	uint32_t _D = 0x10325476;
 
 	void _handle();
-	void _debug();
+	//void _debug();
 public:
 	MD4() {};
 	void load_string(const std::string& input);
@@ -133,7 +134,7 @@ void MD4::load_string(const std::string& input) {
 		);
 		break;
 	default:
-		throw std::exception("This should not happen. Error in the switch in funtion MD2::load_string()!");
+		throw std::runtime_error("This should not happen. Error in the switch in funtion MD2::load_string()!");
 		break;
 	}
 
