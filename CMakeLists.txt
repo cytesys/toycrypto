@@ -27,6 +27,7 @@ add_library(cryptotest STATIC
 	./src/md.hpp
 	./src/md2.cpp
 	./src/md4.cpp
+	./src/md5.cpp
 )
 add_executable(bin ./src/main.cpp)
 

@@ -60,14 +60,22 @@ int main(int argc, char** argv) {
 			printf("%s\n", SHA::sha3_512(argv[2]).c_str());
 		} else if (strcmp(argv[1], "md2") == 0) {
 			printf("%s\n", MD::md2(argv[2]).c_str());
+		} else if (strcmp(argv[1], "md2_file") == 0) {
+			printf("%s\n", MD::md2_file(argv[2]).c_str());
 		} else if (strcmp(argv[1], "md4") == 0) {
 			printf("%s\n", MD::md4(argv[2]).c_str());
+		} else if (strcmp(argv[1], "md4_file") == 0) {
+			printf("%s\n", MD::md4_file(argv[2]).c_str());
+		} else if (strcmp(argv[1], "md5") == 0) {
+			printf("%s\n", MD::md5(argv[2]).c_str());
+		} else if (strcmp(argv[1], "md5_file") == 0) {
+			printf("%s\n", MD::md5_file(argv[2]).c_str());
 		} else {
 			printf("Error: The method \"%s\" is not implemented!\n", argv[1]);
 			return 1;
 		}
 	} else {
-		printf("Usage: <hash_method> <string_to_be_hashed> [output_length]\n");
+		printf("Usage: %s <hash_method> <string_to_be_hashed> [output_length]\n", argv[0]);
 	}
 
 	return 0;
