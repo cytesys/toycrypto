@@ -12,7 +12,15 @@ This project has an executable (bin.exe), mostly for testing purposes, and CMake
 - [x] SHA3
 - [x] MD2
 - [x] MD4
-- [ ] MD5
+- [x] MD5
+- [ ] MD6
 
+## How to build and test
+Inside the project root directory:
+```bash
+mkdir build && cd build
+cmake ..
+make -j 4 && make test
+```
 ---
 ***This library is not meant to be used seriously, this is just me learning about crypto, C++, CMake and GitHub.***
