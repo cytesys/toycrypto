@@ -16,7 +16,6 @@ This project has an executable (bin.exe), mostly for testing purposes, and CMake
 - [ ] MD6
 
 ## How to build and test
-Inside the project root directory:
 ```bash
 git clone git@github.com:cytesys/toycrypto.git
 cd toycrypto
