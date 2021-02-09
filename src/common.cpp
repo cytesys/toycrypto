@@ -5,7 +5,7 @@ constexpr unsigned int BYTE  = 8;
 constexpr unsigned int NIBBLE  = 4;
 constexpr uint8_t BYTE_MASK = 0xff;
 
-auto chars_to_uint32_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d) -> uint32_t {
+uint32_t chars_to_uint32_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 	auto at = static_cast<uint32_t>(a);
 	auto bt = static_cast<uint32_t>(b);
 	auto ct = static_cast<uint32_t>(c);
@@ -14,34 +14,33 @@ auto chars_to_uint32_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d) -> uint32_t {
 	return (at << BYTE * 3) | (bt << BYTE * 2) | (ct << BYTE) | dt;
 }
 
-auto chars_to_uint64_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h) -> uint64_t {
+uint64_t chars_to_uint64_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h) {
 	auto t0 = static_cast<uint64_t>(chars_to_uint32_t(a, b, c, d));
 	auto t1 = static_cast<uint64_t>(chars_to_uint32_t(e, f, g, h));
 
 	return (t0 << BYTE * 4) | t1;
 }
 
-auto leftrotate(uint8_t a, unsigned int num) -> uint8_t {
+uint8_t leftrotate(uint8_t a, unsigned int num) {
 	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
 }
 
-auto leftrotate(uint32_t a, unsigned int num) -> uint32_t {
+uint32_t leftrotate(uint32_t a, unsigned int num) {
 	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
 }
 
-auto leftrotate(uint64_t a, unsigned int num) -> uint64_t {
+uint64_t leftrotate(uint64_t a, unsigned int num) {
 	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
 }
-
-auto rightrotate(uint32_t a, unsigned int num) -> uint32_t {
+uint32_t rightrotate(uint32_t a, unsigned int num) {
     return leftrotate(a, (sizeof(a) * BYTE) - num);
 }
 
-auto rightrotate(uint64_t a, unsigned int num) -> uint64_t {
+uint64_t rightrotate(uint64_t a, unsigned int num) {
     return leftrotate(a, (sizeof(a) * BYTE) - num);
 }
 
-auto reverse_endianness(uint32_t a) -> uint32_t {
+uint32_t reverse_endianness(uint32_t a) {
 	uint32_t temp = 0;
 	for (int i = 0; i < sizeof(a); i++) {
 		temp |= (leftrotate(a, (i + 1) * BYTE) & BYTE_MASK) << (i * BYTE);
@@ -49,7 +48,7 @@ auto reverse_endianness(uint32_t a) -> uint32_t {
 	return temp;
 }
 
-auto reverse_endianness(uint64_t a) -> uint64_t {
+uint64_t reverse_endianness(uint64_t a) {
 	uint64_t temp = 0;
 	for (int i = 0; i < sizeof(a); i++) {
 		temp |= (leftrotate(a, (i + 1) * BYTE) & BYTE_MASK) << (i * BYTE);
@@ -113,7 +112,7 @@ static auto nibble_to_hex(uint8_t nibble) -> std::string {
 	}
 }
 
-auto uint_to_hex(uint8_t a) -> std::string {
+auto byte_to_hex(uint8_t a) -> std::string {
 	std::string result = "";
 	for (int i = NIBBLE; i <= sizeof(a) * BYTE; i += NIBBLE) {
 		result += nibble_to_hex(leftrotate(a, i) & 0xf);

@@ -1,4 +1,4 @@
-doxygen_config
 CMakeSettings.json
 .vs
 out
+tests

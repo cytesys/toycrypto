@@ -1,6 +1,5 @@
 #include <cstring>
-#include <sha.hpp>
-#include <md.hpp>
+#include "toycrypto.hpp"
 
 int main(int argc, char** argv) {
 	if (argc > 2) {
@@ -76,6 +75,9 @@ int main(int argc, char** argv) {
 		}
 	} else {
 		printf("Usage: %s <hash_method> <string_to_be_hashed> [output_length]\n", argv[0]);
+		for (int i = 0; i < argc; i++) {
+			printf("%s\n", argv[i]);
+		}
 	}
 
 	return 0;

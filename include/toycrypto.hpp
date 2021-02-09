@@ -29,12 +29,12 @@ namespace SHA {
 	auto sha512_256(const std::string &input) -> std::string;
 	auto sha512_256_file(const std::string &filename) -> std::string;
 	
-	std::string shake128(std::string input, unsigned int output_length);
-	std::string shake256(std::string input, unsigned int output_length);
-	std::string sha3_224(std::string input);
-	std::string sha3_256(std::string input);
-	std::string sha3_384(std::string input);
-	std::string sha3_512(std::string input);
+	auto shake128(std::string input, unsigned int output_length) -> std::string;
+	auto shake256(std::string input, unsigned int output_length) -> std::string;
+	auto sha3_224(std::string input) -> std::string;
+	auto sha3_256(std::string input) -> std::string;
+	auto sha3_384(std::string input) -> std::string;
+	auto sha3_512(std::string input) -> std::string;
 }
 
 namespace MD {

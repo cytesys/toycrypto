@@ -23,7 +23,7 @@ static void store64(uint8_t *x, uint64_t u) {
 	unsigned int i;
 
 	for (i = 0; i < 8; ++i) {
-		x[i] = u;
+		x[i] = (u & 0xff);
 		u >>= 8;
 	}
 }
@@ -119,7 +119,7 @@ std::string keccak(unsigned int rate, unsigned int capacity, std::string input, 
 	unsigned int rate_in_bytes = rate / 8;
 	unsigned int blocksize = 0;
 	unsigned int i;
-	unsigned int input_byte_length = input.length();
+	unsigned int input_byte_length = static_cast<unsigned int>(input.length());
 	unsigned int osc = output_byte_length;
 	unsigned int input_offset = 0;
 	
@@ -193,9 +193,7 @@ std::string keccak(unsigned int rate, unsigned int capacity, std::string input, 
 	// Convert the output byte array to hex string
 	std::string hash;
 	for (i = 0; i < osc; i++) {
-		char temp[3];
-		sprintf(temp, "%02x", output[i]);
-		hash += temp;
+		hash += byte_to_hex(static_cast<uint8_t>(output[i]));
 	}
 
 	return hash;

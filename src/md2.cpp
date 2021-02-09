@@ -2,7 +2,7 @@
 #include <string>
 #include <array>
 #include <fstream>
-#include "common.cpp"
+#include "common.hpp"
 
 constexpr std::array<uint8_t, 256> S = {
 	0x29, 0x2E, 0x43, 0xC9, 0xA2, 0xD8, 0x7C, 0x01,
@@ -188,7 +188,7 @@ auto MD2::output() -> std::string {
 	std::string result = "";
 
 	for (int i = 0; i < 16; i++) {
-		result += uint_to_hex(_X.at(i));
+		result += byte_to_hex(_X.at(i));
 	}
 
 	return result;
