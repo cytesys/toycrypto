@@ -17,13 +17,15 @@ This library is not meant to be used seriously, this is just me learning about c
 ### Dependencies
 You need:
 - CMake 3.1 or higher
+- build-essential
 
 ### Building
 ```bash
 git clone git@github.com:cytesys/toycrypto.git
 cd toycrypto
 mkdir build && cd build
-cmake --build ..
+cmake ..
+make -j4
 
 \# To run the tests
 ctest
