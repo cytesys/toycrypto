@@ -1,4 +1,5 @@
 #include <vector>
+#include <cstring>
 #include <algorithm>
 #include "common.hpp"
 
