@@ -1,48 +1,13 @@
-#include <stdio.h>
-#include <cstdint>
-#include <inttypes.h>
-#include <string>
 #include <vector>
 #include <algorithm>
-#include <cstring>
 #include "common.hpp"
 
-static uint64_t load64(const uint8_t *x) {
-	int i;
-	uint64_t u = 0;
-
-	for (i = 7; i >= 0; --i) {
-		u <<= 8;
-		u |= x[i];
-	}
-
-	return u;
-}
-
-static void store64(uint8_t *x, uint64_t u) {
-	unsigned int i;
-
-	for (i = 0; i < 8; ++i) {
-		x[i] = (u & 0xff);
-		u >>= 8;
-	}
-}
-
-static void xor64(uint8_t *x, uint64_t u) {
-	unsigned int i;
-
-	for (i = 0; i < 8; ++i) {
-		x[i] ^= u;
-		u >>= 8;
-	}
-}
-
 #define fi(x, y) 				((x)+5*(y))
-#define readlane(x, y)			load64((uint8_t*)state+sizeof(uint64_t)*fi(x, y))
-#define writelane(x, y, lane)	store64((uint8_t*)state+sizeof(uint64_t)*fi(x, y), lane)
-#define xorlane(x, y, lane)		xor64((uint8_t*)state+sizeof(uint64_t)*fi(x, y), lane)
+#define readlane(x, y)			u8_to_u64((u8*)state+sizeof(u64)*fi(x, y))
+#define writelane(x, y, lane)	store_u64_to_u8((u8*)state+sizeof(u64)*fi(x, y), lane)
+#define xorlane(x, y, lane)		xor_u64_with_u8((u8*)state+sizeof(u64)*fi(x, y), lane)
 
-int lfsr86540(uint8_t *lfsr) {
+int lfsr86540(u8 *lfsr) {
 	int result = ((*lfsr) & 0x01) != 0;
 
 	if (((*lfsr) & 0x80) != 0) {
@@ -54,13 +19,13 @@ int lfsr86540(uint8_t *lfsr) {
 	return result;
 }
 
-void keccak_f1600(uint8_t *state) {
-	unsigned int round, x, y, j, t;
-	uint8_t lfsrstate = 0x01;
+void keccak_f1600(u8 *state) {
+	int round, x, y, j, t;
+	u8 lfsrstate = 0x01;
 
 	for (round = 0; round < 24; round++) {
 		{
-			uint64_t c[5], d;
+			u64 c[5], d;
 
 			for (x = 0; x < 5; x++) {
 				c[x] = readlane(x, 0) ^ readlane(x, 1) ^ readlane(x, 2) ^ readlane(x, 3) ^ readlane(x, 4);
@@ -75,13 +40,13 @@ void keccak_f1600(uint8_t *state) {
 		}
 
 		{
-			uint64_t current, temp;
+			u64 current, temp;
 			x = 1; y = 0;
 			current = readlane(x, y);
 
 			for (t = 0; t < 24; t++) {
-				unsigned int r = ((t + 1) * (t + 2) / 2) % 64;
-				unsigned int Y = (2 * x + 3 * y) % 5; x = y; y = Y;
+				int r = ((t + 1) * (t + 2) / 2) % 64;
+				int Y = (2 * x + 3 * y) % 5; x = y; y = Y;
 				temp = readlane(x, y);
 				writelane(x, y, leftrotate(current, r));
 				current = temp;
@@ -89,7 +54,7 @@ void keccak_f1600(uint8_t *state) {
 		}
 
 		{
-			uint64_t temp[5];
+			u64 temp[5];
 
 			for (y = 0; y < 5; y++) {
 				for (x = 0; x < 5; x++) {
@@ -104,24 +69,23 @@ void keccak_f1600(uint8_t *state) {
 
 		{
 			for (j = 0; j < 7; j++) {
-				unsigned int bitpos = (1 << j) - 1;
+				int bitpos = (1 << j) - 1;
 				if (lfsr86540(&lfsrstate)) {
-					xorlane(0, 0, (uint64_t)1 << bitpos);
+					xorlane(0, 0, (u64)1 << bitpos);
 				}
 			}
 		}
 	}
 }
 
-std::string keccak(unsigned int rate, unsigned int capacity, std::string input, uint8_t delimeted_suffix, unsigned int output_byte_length) {
-	std::vector<uint8_t> output;
-	uint8_t state[200];
-	unsigned int rate_in_bytes = rate / 8;
-	unsigned int blocksize = 0;
-	unsigned int i;
-	unsigned int input_byte_length = static_cast<unsigned int>(input.length());
-	unsigned int osc = output_byte_length;
-	unsigned int input_offset = 0;
+str keccak(int rate, int capacity, str &input, u8 delimeted_suffix, int output_byte_length) {
+	std::vector<u8> output;
+	u8 state[200];
+	u64 rate_in_bytes = rate / 8;
+	size_t blocksize = 0;
+	size_t input_byte_length = input.length();
+	size_t osc = output_byte_length;
+	size_t input_offset = 0;
 	
 	if ((rate + capacity) != 1600) {
 		throw "The sum of rate and capacity must equal 1600!";
@@ -136,9 +100,9 @@ std::string keccak(unsigned int rate, unsigned int capacity, std::string input, 
 
 	// Absorb all the input blocks
 	while (input_byte_length > 0) {
-		blocksize = std::min(input_byte_length, rate_in_bytes);
+		blocksize = std::min(static_cast<u64>(input_byte_length), rate_in_bytes);
 
-		for (i = 0; i < blocksize; i++) {
+		for (int i = 0; i < blocksize; i++) {
 			state[i] ^= input[i + input_offset];
 		}
 
@@ -176,13 +140,13 @@ std::string keccak(unsigned int rate, unsigned int capacity, std::string input, 
 
 	// Squeeze all the output blocks
 	while (output_byte_length > 0) {
-		blocksize = std::min(output_byte_length, rate_in_bytes);
+		blocksize = std::min(static_cast<u64>(output_byte_length), rate_in_bytes);
 		
-		for (i = 0; i < blocksize; i++) {
+		for (int i = 0; i < blocksize; i++) {
 			output.push_back(state[i]);
 		}
 		
-		output.push_back((uint8_t)(blocksize & 0xff));
+		output.push_back((u8)(blocksize & 0xff));
 		output_byte_length -= blocksize;
 
 		if (output_byte_length > 0) {
@@ -191,16 +155,16 @@ std::string keccak(unsigned int rate, unsigned int capacity, std::string input, 
 	}
 
 	// Convert the output byte array to hex string
-	std::string hash;
-	for (i = 0; i < osc; i++) {
-		hash += byte_to_hex(static_cast<uint8_t>(output[i]));
+	str hash;
+	for (int i = 0; i < osc; i++) {
+		hash += u8_to_hex(output[i]);
 	}
 
 	return hash;
 }
 
 namespace SHA {
-	std::string shake128(std::string input, unsigned int output_length) {
+	auto shake128(str input, unsigned int output_length) -> str{
 		if ((output_length % 8) != 0) {
 			throw "The output length must be divisible by 8!";
 		}
@@ -208,7 +172,7 @@ namespace SHA {
 		return keccak(1344, 256, input, 0x1f, output_length / 8);
 	}
 
-	std::string shake256(std::string input, unsigned int output_length) {
+	auto shake256(str input, unsigned int output_length) -> str {
 		if ((output_length % 8) != 0) {
 			throw "The output length must be divisible by 8!";
 		}
@@ -216,19 +180,19 @@ namespace SHA {
 		return keccak(1088, 512, input, 0x1f, output_length / 8);
 	}
 
-	std::string sha3_224(std::string input) {
+	auto sha3_224(str input) -> str {
 		return keccak(1152, 448, input, 0x06, 28);
 	}
 
-	std::string sha3_256(std::string input) {
+	auto sha3_256(str input) -> str {
 		return keccak(1088, 512, input, 0x06, 32);
 	}
 
-	std::string sha3_384(std::string input) {
+	auto sha3_384(str input) -> str {
 		return keccak(832, 768, input, 0x06, 48);
 	}
 
-	std::string sha3_512(std::string input) {
+	auto sha3_512(str input) -> str {
 		return keccak(576, 1024, input, 0x06, 64);
 	}
 }

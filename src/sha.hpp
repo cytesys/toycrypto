@@ -3,39 +3,36 @@
 #ifndef SHA_HPP
 #define SHA_HPP
 
-#include <string>
+#include "common.hpp"
 
 namespace SHA {
-	auto sha0(const std::string &input) -> std::string;
-	auto sha0_file(const std::string &filename) -> std::string;
-	
-	auto sha1(const std::string &input) -> std::string;
-	auto sha1_file(const std::string &filename) -> std::string;
-	
-	auto sha224(const std::string &input) -> std::string;
-	auto sha224_file(const std::string &filename) -> std::string;
-	
-	auto sha256(const std::string &input) -> std::string;
-	auto sha256_file(const std::string &filename) -> std::string;
-	
-	auto sha384(const std::string &input) -> std::string;
-	auto sha384_file(const std::string &filename) -> std::string;
-	
-	auto sha512(const std::string &input) -> std::string;
-	auto sha512_file(const std::string &filename) -> std::string;
-	
-	auto sha512_224(const std::string &input) -> std::string;
-	auto sha512_224_file(const std::string &filename) -> std::string;
-	
-	auto sha512_256(const std::string &input) -> std::string;
-	auto sha512_256_file(const std::string &filename) -> std::string;
-	
-	auto shake128(std::string input, unsigned int output_length)->std::string;
-	auto shake256(std::string input, unsigned int output_length)->std::string;
-	auto sha3_224(std::string input)->std::string;
-	auto sha3_256(std::string input)->std::string;
-	auto sha3_384(std::string input)->std::string;
-	auto sha3_512(std::string input)->std::string;
+	auto sha1(const str &input)->str;
+	auto sha1_file(const str &filename)->str;
+
+	auto sha224(const str &input)->str;
+	auto sha224_file(const str &filename)->str;
+
+	auto sha256(const str &input)->str;
+	auto sha256_file(const str &filename)->str;
+
+	auto sha384(const str &input)->str;
+	auto sha384_file(const str &filename)->str;
+
+	auto sha512(const str &input)->str;
+	auto sha512_file(const str& filename)->str;
+
+	auto sha512_224(const str& input)->str;
+	auto sha512_224_file(const str& filename)->str;
+
+	auto sha512_256(const str& input)->str;
+	auto sha512_256_file(const str& filename)->str;
+
+	auto shake128(str input, unsigned int output_length)->str;
+	auto shake256(str input, unsigned int output_length)->str;
+	auto sha3_224(str input)->str;
+	auto sha3_256(str input)->str;
+	auto sha3_384(str input)->str;
+	auto sha3_512(str input)->str;
 }
 
 #endif

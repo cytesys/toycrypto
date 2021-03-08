@@ -20,7 +20,6 @@ add_library(toycrypto STATIC
 	./src/md2.cpp
 	./src/md4.cpp
 	./src/md5.cpp
-	./src/md6.cpp
 )
 
 add_executable(toycrypto_exec ./src/main.cpp)
@@ -35,7 +34,7 @@ target_include_directories(toycrypto_exec PUBLIC
 enable_testing()
 
 # Does the application run?
-add_test(NAME Runs COMMAND toycrypto_exec sha0 abc)
+add_test(NAME Runs COMMAND toycrypto_exec sha1 abc)
 
 # Does the usage message work?
 add_test(NAME Usage COMMAND toycrypto_exec)

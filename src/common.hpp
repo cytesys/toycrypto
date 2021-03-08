@@ -6,31 +6,24 @@
 #include <cstdint>
 #include <string>
 
-uint32_t chars_to_uint32_t(
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t
-);
+using u8 = uint8_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+using str = std::string;
 
-uint64_t chars_to_uint64_t(
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t,
-	uint8_t
-);
+u32 u8_to_u32(u8, u8, u8, u8);
+u64 u8_to_u64(u8, u8, u8, u8, u8, u8, u8, u8);
+u64 u8_to_u64(const u8*);
 
-uint32_t leftrotate(uint32_t, unsigned int);
-uint64_t leftrotate(uint64_t, unsigned int);
-uint32_t rightrotate(uint32_t, unsigned int);
-uint64_t rightrotate(uint64_t, unsigned int);
-uint32_t reverse_endianness(uint32_t);
-uint64_t reverse_endianness(uint64_t);
-auto uint_to_hex(uint32_t) ->std::string;
-auto byte_to_hex(uint8_t a)->std::string;
+void store_u64_to_u8(u8*, u64);
+void xor_u64_with_u8(u8*, u64);
+
+u32 leftrotate(u32, unsigned int);
+u64 leftrotate(u64, unsigned int);
+u32 rightrotate(u32, unsigned int);
+u64 rightrotate(u64, unsigned int);
+u32 reverse_endianness(u32);
+auto u32_to_hex(u32) -> str;
+auto u8_to_hex(u8 a) -> str;
 
 #endif

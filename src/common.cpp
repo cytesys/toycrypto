@@ -1,62 +1,86 @@
-#include <cstdint>
-#include <string>
+#include "common.hpp"
 
-constexpr unsigned int BYTE  = 8;
-constexpr unsigned int NIBBLE  = 4;
-constexpr uint8_t BYTE_MASK = 0xff;
-
-uint32_t chars_to_uint32_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
-	auto at = static_cast<uint32_t>(a);
-	auto bt = static_cast<uint32_t>(b);
-	auto ct = static_cast<uint32_t>(c);
-	auto dt = static_cast<uint32_t>(d);
+u32 u8_to_u32(u8 a, u8 b, u8 c, u8 d)
+{
+	auto at = static_cast<u32>(a);
+	auto bt = static_cast<u32>(b);
+	auto ct = static_cast<u32>(c);
+	auto dt = static_cast<u32>(d);
 	
-	return (at << BYTE * 3) | (bt << BYTE * 2) | (ct << BYTE) | dt;
+	return (at << 8 * 3) | (bt << 8 * 2) | (ct << 8) | dt;
 }
 
-uint64_t chars_to_uint64_t(uint8_t a, uint8_t b, uint8_t c, uint8_t d, uint8_t e, uint8_t f, uint8_t g, uint8_t h) {
-	auto t0 = static_cast<uint64_t>(chars_to_uint32_t(a, b, c, d));
-	auto t1 = static_cast<uint64_t>(chars_to_uint32_t(e, f, g, h));
+u64 u8_to_u64(u8 a, u8 b, u8 c, u8 d, u8 e, u8 f, u8 g, u8 h)
+{
+	auto t0 = static_cast<u64>(u8_to_u32(a, b, c, d));
+	auto t1 = static_cast<u64>(u8_to_u32(e, f, g, h));
 
-	return (t0 << BYTE * 4) | t1;
+	return (t0 << 8 * 4) | t1;
 }
 
-uint8_t leftrotate(uint8_t a, unsigned int num) {
-	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
+u64 u8_to_u64(const u8* x)
+{
+	u64 u = 0;
+
+	for (int i = 7; i >= 0; --i) {
+		u <<= 8;
+		u |= x[i];
+	}
+
+	return u;
 }
 
-uint32_t leftrotate(uint32_t a, unsigned int num) {
-	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
+void store_u64_to_u8(u8* x, u64 u)
+{
+	for (int i = 0; i < 8; ++i) {
+		x[i] = (u & 0xff);
+		u >>= 8;
+	}
 }
 
-uint64_t leftrotate(uint64_t a, unsigned int num) {
-	return (a << (num % (sizeof(a) * BYTE))) | (a >> ((sizeof(a) * BYTE) - (num % (sizeof(a) * BYTE))));
-}
-uint32_t rightrotate(uint32_t a, unsigned int num) {
-    return leftrotate(a, (sizeof(a) * BYTE) - num);
-}
-
-uint64_t rightrotate(uint64_t a, unsigned int num) {
-    return leftrotate(a, (sizeof(a) * BYTE) - num);
+void xor_u64_with_u8(u8* x, u64 u)
+{
+	for (int i = 0; i < 8; ++i) {
+		x[i] ^= u;
+		u >>= 8;
+	}
 }
 
-uint32_t reverse_endianness(uint32_t a) {
-	uint32_t temp = 0;
+uint8_t leftrotate(uint8_t a, unsigned int num)
+{
+	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
+}
+
+u32 leftrotate(u32 a, unsigned int num)
+{
+	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
+}
+
+u64 leftrotate(u64 a, unsigned int num)
+{
+	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
+}
+u32 rightrotate(u32 a, unsigned int num)
+{
+    return leftrotate(a, (sizeof(a) * 8) - num);
+}
+
+u64 rightrotate(u64 a, unsigned int num)
+{
+    return leftrotate(a, (sizeof(a) * 8) - num);
+}
+
+u32 reverse_endianness(u32 a)
+{
+	u32 temp = 0;
 	for (int i = 0; i < sizeof(a); i++) {
-		temp |= (leftrotate(a, (i + 1) * BYTE) & BYTE_MASK) << (i * BYTE);
+		temp |= (leftrotate(a, (i + 1) * 8) & 0xff) << (i * 8);
 	}
 	return temp;
 }
 
-uint64_t reverse_endianness(uint64_t a) {
-	uint64_t temp = 0;
-	for (int i = 0; i < sizeof(a); i++) {
-		temp |= (leftrotate(a, (i + 1) * BYTE) & BYTE_MASK) << (i * BYTE);
-	}
-	return temp;
-}
-
-static auto nibble_to_hex(uint8_t nibble) -> std::string {
+static auto nibble_to_hex(uint8_t nibble) -> str
+{
 	switch(nibble & 0xf) {
 		case 0x0:
 			return "0";
@@ -112,17 +136,19 @@ static auto nibble_to_hex(uint8_t nibble) -> std::string {
 	}
 }
 
-auto byte_to_hex(uint8_t a) -> std::string {
-	std::string result = "";
-	for (int i = NIBBLE; i <= sizeof(a) * BYTE; i += NIBBLE) {
+auto u8_to_hex(u8 a) -> str
+{
+	str result = "";
+	for (int i = 4; i <= sizeof(a) * 8; i += 4) {
 		result += nibble_to_hex(leftrotate(a, i) & 0xf);
 	}
 	return result;
 }
 
-auto uint_to_hex(uint32_t a) -> std::string {
-	std::string result = "";
-	for (int i = NIBBLE; i <= sizeof(a) * BYTE; i += NIBBLE) {
+auto u32_to_hex(u32 a) -> str
+{
+	str result = "";
+	for (int i = 4; i <= sizeof(a) * 8; i += 4) {
 		result += nibble_to_hex(leftrotate(a, i) & 0xf);
 	}
 	return result;
