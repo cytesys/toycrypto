@@ -27,6 +27,6 @@ mkdir build && cd build
 cmake ..
 make -j4
 
-\# To run the tests
+# To run the tests
 ctest
 ```
