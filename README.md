@@ -21,7 +21,7 @@ You need:
 
 ### Building
 ```bash
-git clone git@github.com:cytesys/toycrypto.git
+git clone https://github.com/cytesys/toycrypto.git
 cd toycrypto
 mkdir build && cd build
 cmake ..
