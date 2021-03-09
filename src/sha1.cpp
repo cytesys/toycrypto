@@ -175,7 +175,7 @@ void SHA1::handle()
 
 	// Extend the words-array to 80 words
 	for (int j = CHUNK_SIZE / 4; j < 80; j++) {
-		words.at(j) = leftrotate(
+		words.at(j) = leftrotate_u32(
 			words.at(j-3) ^ words.at(j-8) ^ words.at(j-14) ^ words.at(j-16),
 			1
 		);
@@ -207,10 +207,10 @@ void SHA1::handle()
 			k = K_INIT[3];
 		}
 
-		u32 temp = leftrotate(a, 5) + f + e + k + words.at(j);
+		u32 temp = leftrotate_u32(a, 5) + f + e + k + words.at(j);
 		e = d;
 		d = c;
-		c = leftrotate(b, 30);
+		c = leftrotate_u32(b, 30);
 		b = a;
 		a = temp;
 	}

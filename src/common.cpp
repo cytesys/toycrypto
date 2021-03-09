@@ -46,40 +46,46 @@ void xor_u64_with_u8(u8* x, u64 u)
 	}
 }
 
-uint8_t leftrotate(uint8_t a, unsigned int num)
+u8 leftrotate_u8(u8 a, unsigned int num)
 {
 	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
 }
 
-u32 leftrotate(u32 a, unsigned int num)
+u32 leftrotate_u32(u32 a, unsigned int num)
 {
 	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
 }
 
-u64 leftrotate(u64 a, unsigned int num)
+u64 leftrotate_u64(u64 a, unsigned int num)
 {
 	return (a << (num % (sizeof(a) * 8))) | (a >> ((sizeof(a) * 8) - (num % (sizeof(a) * 8))));
 }
-u32 rightrotate(u32 a, unsigned int num)
+
+u8 rightrotate_u8(u8 a, unsigned int num)
 {
-    return leftrotate(a, (sizeof(a) * 8) - num);
+	return leftrotate_u8(a, (sizeof(a) * 8) - num);
 }
 
-u64 rightrotate(u64 a, unsigned int num)
+u32 rightrotate_u32(u32 a, unsigned int num)
 {
-    return leftrotate(a, (sizeof(a) * 8) - num);
+    return leftrotate_u32(a, (sizeof(a) * 8) - num);
 }
 
-u32 reverse_endianness(u32 a)
+u64 rightrotate_u64(u64 a, unsigned int num)
+{
+    return leftrotate_u64(a, (sizeof(a) * 8) - num);
+}
+
+u32 reverse_u32(u32 a)
 {
 	u32 temp = 0;
 	for (int i = 0; i < sizeof(a); i++) {
-		temp |= (leftrotate(a, (i + 1) * 8) & 0xff) << (i * 8);
+		temp |= (leftrotate_u32(a, (i + 1) * 8) & 0xff) << (i * 8);
 	}
 	return temp;
 }
 
-static auto nibble_to_hex(uint8_t nibble) -> str
+static auto nibble_to_hex(u8 nibble) -> str
 {
 	switch(nibble & 0xf) {
 		case 0x0:
@@ -140,7 +146,7 @@ auto u8_to_hex(u8 a) -> str
 {
 	str result = "";
 	for (int i = 4; i <= sizeof(a) * 8; i += 4) {
-		result += nibble_to_hex(leftrotate(a, i) & 0xf);
+		result += nibble_to_hex(leftrotate_u8(a, i) & 0xf);
 	}
 	return result;
 }
@@ -149,7 +155,7 @@ auto u32_to_hex(u32 a) -> str
 {
 	str result = "";
 	for (int i = 4; i <= sizeof(a) * 8; i += 4) {
-		result += nibble_to_hex(leftrotate(a, i) & 0xf);
+		result += nibble_to_hex(leftrotate_u32(a, i) & 0xf);
 	}
 	return result;
 }

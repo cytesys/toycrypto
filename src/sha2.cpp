@@ -279,8 +279,8 @@ void SHA2_32::handle()
 
 	// Extend the first 16 words to the remaining 48
 	for (u64 j = CHUNK32_SIZE / 4; j < K32_SIZE; j++) {
-		u32 s0 = rightrotate(words.at(j - 15), 7) ^ rightrotate(words.at(j - 15), 18) ^ (words.at(j - 15) >> 3);
-		u32 s1 = rightrotate(words.at(j - 2), 17) ^ rightrotate(words.at(j - 2), 19) ^ (words.at(j - 2) >> 10);
+		u32 s0 = rightrotate_u32(words.at(j - 15), 7) ^ rightrotate_u32(words.at(j - 15), 18) ^ (words.at(j - 15) >> 3);
+		u32 s1 = rightrotate_u32(words.at(j - 2), 17) ^ rightrotate_u32(words.at(j - 2), 19) ^ (words.at(j - 2) >> 10);
 		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
 	}
 
@@ -295,10 +295,10 @@ void SHA2_32::handle()
 
 	// Main compression loop
 	for (int j = 0; j < K32_SIZE; j++) {
-		u32 s1 = rightrotate(e, 6) ^ rightrotate(e, 11) ^ rightrotate(e, 25);
+		u32 s1 = rightrotate_u32(e, 6) ^ rightrotate_u32(e, 11) ^ rightrotate_u32(e, 25);
 		u32 ch = (e & f) ^ (~e & g);
 		u32 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
-		u32 s0 = rightrotate(a, 2) ^ rightrotate(a, 13) ^ rightrotate(a, 22);
+		u32 s0 = rightrotate_u32(a, 2) ^ rightrotate_u32(a, 13) ^ rightrotate_u32(a, 22);
 		u32 maj = (a & b) ^ (a & c) ^ (b & c);
 		u32 temp2 = s0 + maj;
 
@@ -514,8 +514,8 @@ void SHA2_64::handle()
 
 	// Extend the first 16 words to 80
 	for (int j = 16; j < K64_SIZE; j++) {
-		u64 s0 = rightrotate(words.at(j - 15), 1) ^ rightrotate(words.at(j - 15), 8) ^ (words.at(j - 15) >> 7);
-		u64 s1 = rightrotate(words.at(j - 2), 19) ^ rightrotate(words.at(j - 2), 61) ^ (words.at(j - 2) >> 6);
+		u64 s0 = rightrotate_u64(words.at(j - 15), 1) ^ rightrotate_u64(words.at(j - 15), 8) ^ (words.at(j - 15) >> 7);
+		u64 s1 = rightrotate_u64(words.at(j - 2), 19) ^ rightrotate_u64(words.at(j - 2), 61) ^ (words.at(j - 2) >> 6);
 		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
 	}
 
@@ -530,10 +530,10 @@ void SHA2_64::handle()
 
 	// Main compression loop
 	for (int j = 0; j < K64_SIZE; j++) {
-		u64 s1 = rightrotate(e, 14) ^ rightrotate(e, 18) ^ rightrotate(e, 41);
+		u64 s1 = rightrotate_u64(e, 14) ^ rightrotate_u64(e, 18) ^ rightrotate_u64(e, 41);
 		u64 ch = (e & f) ^ (~e & g);
 		u64 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
-		u64 s0 = rightrotate(a, 28) ^ rightrotate(a, 34) ^ rightrotate(a, 39);
+		u64 s0 = rightrotate_u64(a, 28) ^ rightrotate_u64(a, 34) ^ rightrotate_u64(a, 39);
 		u64 maj = (a & b) ^ (a & c) ^ (b & c);
 		u64 temp2 = s0 + maj;
 

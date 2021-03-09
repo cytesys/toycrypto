@@ -139,7 +139,7 @@ void MD5::load_string(const str& input)
 
 	// Append the message length
 	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate(length, 32) & 0xffffffff;
+	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
 
 	handle();
 }
@@ -245,7 +245,7 @@ void MD5::load_file(const str &filename)
 
 	// Append the message length
 	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate(length, 32) & 0xffffffff;
+	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
 
 	handle();
 }
@@ -279,7 +279,7 @@ void MD5::handle()
 		a = d;
 		d = c;
 		c = b;
-		b = b + leftrotate(f, S[i]);
+		b = b + leftrotate_u32(f, S[i]);
 	}
 
 	m_a += a;
@@ -291,10 +291,10 @@ void MD5::handle()
 auto MD5::output() const -> str
 {
 	str result = "";
-	result += u32_to_hex(reverse_endianness(m_a));
-	result += u32_to_hex(reverse_endianness(m_b));
-	result += u32_to_hex(reverse_endianness(m_c));
-	result += u32_to_hex(reverse_endianness(m_d));
+	result += u32_to_hex(reverse_u32(m_a));
+	result += u32_to_hex(reverse_u32(m_b));
+	result += u32_to_hex(reverse_u32(m_c));
+	result += u32_to_hex(reverse_u32(m_d));
 	return result;
 }
 

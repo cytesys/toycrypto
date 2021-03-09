@@ -17,15 +17,15 @@ static u32 H(u32 x, u32 y, u32 z) {
 }
 
 static u32 FF(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate(a + F(b, c, d) + x, s);
+	return leftrotate_u32(a + F(b, c, d) + x, s);
 }
 
 static u32 GG(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate(a + G(b, c, d) + x + (u32)0x5a827999, s);
+	return leftrotate_u32(a + G(b, c, d) + x + (u32)0x5a827999, s);
 }
 
 static u32 HH(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate(a + H(b, c, d) + x + (u32)0x6ed9eba1, s);
+	return leftrotate_u32(a + H(b, c, d) + x + (u32)0x6ed9eba1, s);
 }
 
 class MD4 {
@@ -142,7 +142,7 @@ void MD4::load_string(const str& input)
 
 	// Append the message length
 	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate(length, 32) & 0xffffffff;
+	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
 
 	handle();
 }
@@ -249,7 +249,7 @@ void MD4::load_file(const str &filename)
 
 	// Append the message length
 	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate(length, 32) & 0xffffffff;
+	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
 
 	handle();
 }
@@ -326,10 +326,10 @@ void MD4::handle()
 auto MD4::output() const -> str
 {
 	str result = "";
-	result += u32_to_hex(reverse_endianness(m_a));
-	result += u32_to_hex(reverse_endianness(m_b));
-	result += u32_to_hex(reverse_endianness(m_c));
-	result += u32_to_hex(reverse_endianness(m_d));
+	result += u32_to_hex(reverse_u32(m_a));
+	result += u32_to_hex(reverse_u32(m_b));
+	result += u32_to_hex(reverse_u32(m_c));
+	result += u32_to_hex(reverse_u32(m_d));
 	return result;
 }
 

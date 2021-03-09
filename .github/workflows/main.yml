@@ -32,7 +32,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: lukka/get-cmake@latest
+      - name: Get CMake
+        uses: lukka/get-cmake@latest
       - name: Run CMake
         uses: lukka/run-cmake@main
         with: 

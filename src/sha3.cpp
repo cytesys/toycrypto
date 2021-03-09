@@ -33,7 +33,7 @@ void keccak_f1600(u8 *state) {
 			}
 
 			for (x = 0; x < 5; x++) {
-				d = c[(x + 4) % 5] ^ leftrotate(c[(x + 1) % 5], 1);
+				d = c[(x + 4) % 5] ^ leftrotate_u64(c[(x + 1) % 5], 1);
 				for (y = 0; y < 5; y++) {
 					xorlane(x, y, d);
 				}
@@ -49,7 +49,7 @@ void keccak_f1600(u8 *state) {
 				int r = ((t + 1) * (t + 2) / 2) % 64;
 				int Y = (2 * x + 3 * y) % 5; x = y; y = Y;
 				temp = readlane(x, y);
-				writelane(x, y, leftrotate(current, r));
+				writelane(x, y, leftrotate_u64(current, r));
 				current = temp;
 			}
 		}

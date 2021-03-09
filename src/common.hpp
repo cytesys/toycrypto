@@ -18,11 +18,16 @@ u64 u8_to_u64(const u8*);
 void store_u64_to_u8(u8*, u64);
 void xor_u64_with_u8(u8*, u64);
 
-u32 leftrotate(u32, unsigned int);
-u64 leftrotate(u64, unsigned int);
-u32 rightrotate(u32, unsigned int);
-u64 rightrotate(u64, unsigned int);
-u32 reverse_endianness(u32);
+u8 leftrotate_u8(u8, unsigned int);
+u32 leftrotate_u32(u32, unsigned int);
+u64 leftrotate_u64(u64, unsigned int);
+
+u8 rightrotate_u8(u8, unsigned int);
+u32 rightrotate_u32(u32, unsigned int);
+u64 rightrotate_u64(u64, unsigned int);
+
+u32 reverse_u32(u32);
+
 auto u32_to_hex(u32) -> str;
 auto u8_to_hex(u8 a) -> str;
 
