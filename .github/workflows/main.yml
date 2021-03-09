@@ -3,14 +3,16 @@ name: C/C++ CI
 on:
   push:
     branches: [ master ]
-    paths-ignore:
-      - 'README.md'
-      - '.gitignore'
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - 'CMakeLists.txt'
   pull_request:
     branches: [ master ]
-    paths-ignore:
-      - 'README.md'
-      - '.gitignore'
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - 'CMakeLists.txt'
 
 jobs:
   build:
