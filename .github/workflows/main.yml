@@ -14,8 +14,18 @@ on:
 
 jobs:
   build:
-
-    runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    name: ${{ matrix.os }}-hosted-basic
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: windows-latest
+            triplet: x64-windows
+          - os: ubuntu-latest
+            triplet: x64-linux
+          - os: macos-latest
+            triplet: x64-osx
 
     steps:
       - name: Checkout
