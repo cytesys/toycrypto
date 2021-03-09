@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.1)
 # project name
 project(toycrypto VERSION 0.0.1)
 
+set(CMAKE_CXX_STANDARD 11)
+
 # target
 add_library(toycrypto STATIC
 	# Common functions
@@ -23,6 +25,14 @@ add_library(toycrypto STATIC
 )
 
 add_executable(toycrypto_exec ./src/main.cpp)
+
+set_target_properties(toycrypto PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+)
+
+set_target_properties(toycrypto_exec PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+)
 
 target_link_libraries(toycrypto_exec PUBLIC toycrypto)
 target_include_directories(toycrypto_exec PUBLIC
