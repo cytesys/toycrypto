@@ -1,5 +1,6 @@
 # Toycrypto
 ![C/C++ CI](https://github.com/cytesys/toycrypto/workflows/C/C++%20CI/badge.svg?branch=master)
+[![CodeQL](https://github.com/cytesys/toycrypto/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/cytesys/toycrypto/actions/workflows/codeql-analysis.yml)
 ## Introduction
 This is a crypto library written in C++. C++11 and CMake are required. It should work on linux, windows and osx.
 This library is not meant to be used for anything, this is just me learning about crypto, C++, CMake and GitHub.
