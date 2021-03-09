@@ -299,14 +299,14 @@ auto MD5::output() const -> str
 }
 
 namespace MD {
-	auto md5(const str& input)
+	auto md5(const str& input) -> str
 	{
 		MD5 instance = MD5();
 		instance.load_string(input);
 		return instance.output();
 	}
 
-	auto md5_file(const str& filename)
+	auto md5_file(const str& filename) -> str
 	{
 		MD5 instance = MD5();
 		instance.load_file(filename);

@@ -334,14 +334,14 @@ auto MD4::output() const -> str
 }
 
 namespace MD {
-	auto md4(const str& input)
+	auto md4(const str& input) -> str
 	{
 		MD4 instance = MD4();
 		instance.load_string(input);
 		return instance.output();
 	}
 
-	auto md4_file(const str& filename)
+	auto md4_file(const str& filename) -> str
 	{
 		MD4 instance = MD4();
 		instance.load_file(filename);
