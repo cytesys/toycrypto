@@ -63,7 +63,7 @@ void MD2::load_file(const str& filename)
 	std::ifstream infile(filename, std::ifstream::binary);
 
 	if (!infile.good())
-		throw std::ios_base::failure("Could not open file!");
+		throw "Could not open file!";
 
 	// Get the file length
 	infile.seekg(0, infile.end);

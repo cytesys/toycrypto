@@ -159,7 +159,7 @@ void SHA2_32::load_file(const str &filename)
 	std::ifstream infile(filename, std::ifstream::binary);
 	
 	if (!infile.good())
-		throw std::ios_base::failure("Could not open file!");
+		throw "Could not open file!";
 
 	// Get infile length
 	infile.seekg (0, infile.end);
@@ -394,7 +394,7 @@ void SHA2_64::load_file(const str &filename)
 	char* buffer = new char[CHUNK64_SIZE] {};
 	std::ifstream infile(filename, std::ifstream::binary);
 	if (!infile.good())
-		throw std::ios_base::failure("Could not open file!");
+		throw "Could not open file!";
 	
 	// Get infile length
 	infile.seekg (0, infile.end);

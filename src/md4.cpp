@@ -159,7 +159,7 @@ void MD4::load_file(const str &filename)
 	char* buffer = new char[64];
 	std::ifstream infile(filename, std::ifstream::binary);
 	if (!infile.good())
-		throw std::ios_base::failure("Could not open file!");
+		throw "Could not open file!";
 
 	// Get file length
 	infile.seekg(0, infile.end);
