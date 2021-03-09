@@ -1,8 +1,8 @@
 # Toycrypto
 ![C/C++ CI](https://github.com/cytesys/toycrypto/workflows/C/C++%20CI/badge.svg?branch=master)
 ## Introduction
-This is a toy crypto library in C++ in the making. It should work on any platform (that has the C++ standard libraries).
-This library is not meant to be used seriously, this is just me learning about crypto, C++, CMake and GitHub.
+This is a crypto library written in C++. C++11 and CMake are required. It should work on linux, windows and osx.
+This library is not meant to be used for anything, this is just me learning about crypto, C++, CMake and GitHub.
 
 ## Currently implemented cryptographic functions
 *So far, only hashing functions are implemented.*
@@ -28,5 +28,5 @@ cmake ..
 make -j4
 
 # To run the tests
-ctest
+make test
 ```
