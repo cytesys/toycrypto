@@ -44,6 +44,16 @@ jobs:
           cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
           buildDirectory: ${{ github.workspace }}/build
           useVcpkgToolchainFile: false
-
-      - name: Test
+        
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            triplet: x64-linux
+    steps:
+      - name: CTest
         run: cd ${{ github.workspace }}/build && ctest
