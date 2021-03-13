@@ -22,9 +22,21 @@ add_library(toycrypto STATIC
 	./src/md2.cpp
 	./src/md4.cpp
 	./src/md5.cpp
+
+	#BLAKE
+	./src/blake.hpp
+	./src/blake.cpp
 )
 
 add_executable(toycrypto_exec ./src/main.cpp)
+
+add_executable(testing 
+	./src/testing.cpp
+	./src/blake.hpp
+	./src/blake.cpp
+	./src/common.hpp
+	./src/common.cpp
+)
 
 set_target_properties(toycrypto PROPERTIES
     CXX_STANDARD_REQUIRED ON
@@ -331,4 +343,72 @@ do_test("MD5_long" "md5"
 	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
 	""
 	"^d3bf3ebaeb624f7528e1fabc760e82d5\n$"
+)
+
+# BLAKE224
+do_test("BLAKE224_empty_nosalt" "blake224"
+	""
+	""
+	"^7dc5313b1c04512a174bd6503b89607aecbee0903d40a8a569c94eed\n$"
+)
+do_test("BLAKE224_norm_nosalt" "blake224"
+	"The quick brown fox jumps over the lazy dog"
+	""
+	"^c8e92d7088ef87c1530aee2ad44dc720cc10589cc2ec58f95a15e51b\n$"
+)
+do_test("BLAKE224_long_nosalt" "blake224"
+	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
+	""
+	"^5fcf27f757e7a4ed78fc3ca1676d2043145c9ad4b9345b21eaea8b9e\n$"
+)
+
+# BLAKE256
+do_test("BLAKE256_empty_nosalt" "blake256"
+	""
+	""
+	"^716f6e863f744b9ac22c97ec7b76ea5f5908bc5b2f67c61510bfc4751384ea7a\n$"
+)
+do_test("BLAKE256_norm_nosalt" "blake256"
+	"The quick brown fox jumps over the lazy dog"
+	""
+	"^7576698ee9cad30173080678e5965916adbb11cb5245d386bf1ffda1cb26c9d7\n$"
+)
+do_test("BLAKE256_long_nosalt" "blake256"
+	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
+	""
+	"^86a10eea726d004de8bd794ffbc411909ea307ca2f390f92052fa49cd1dfe6ee\n$"
+)
+
+# BLAKE384
+do_test("BLAKE384_empty_nosalt" "blake384"
+	""
+	""
+	"^c6cbd89c926ab525c242e6621f2f5fa73aa4afe3d9e24aed727faaadd6af38b620bdb623dd2b4788b1c8086984af8706\n$"
+)
+do_test("BLAKE384_norm_nosalt" "blake384"
+	"The quick brown fox jumps over the lazy dog"
+	""
+	"^67c9e8ef665d11b5b57a1d99c96adffb3034d8768c0827d1c6e60b54871e8673651767a2c6c43d0ba2a9bb2500227406\n$"
+)
+do_test("BLAKE384_long_nosalt" "blake384"
+	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
+	""
+	"^f6a6dc548b20b6d72007b94003e345eb488cc2f4fc16d814fa6ecd23a429f1111a3e3833223e48468649367bf955285f\n$"
+)
+
+# BLAKE512
+do_test("BLAKE512_empty_nosalt" "blake512"
+	""
+	""
+	"^a8cfbbd73726062df0c6864dda65defe58ef0cc52a5625090fa17601e1eecd1b628e94f396ae402a00acc9eab77b4d4c2e852aaaa25a636d80af3fc7913ef5b8\n$"
+)
+do_test("BLAKE512_norm_nosalt" "blake512"
+	"The quick brown fox jumps over the lazy dog"
+	""
+	"^1f7e26f63b6ad25a0896fd978fd050a1766391d2fd0471a77afb975e5034b7ad2d9ccf8dfb47abbbe656e1b82fbc634ba42ce186e8dc5e1ce09a885d41f43451\n$"
+)
+do_test("BLAKE512_long_nosalt" "blake512"
+	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
+	""
+	"^74a844bad83a17be5212ac174d79f8e0e2ce5545b5e1796e7ed938afbdf27081f231d5961bba36ac08895918b93cd0b610c9d7d94879cbbd74143fa898f835b0\n$"
 )

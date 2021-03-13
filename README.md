@@ -13,6 +13,7 @@ This library is not meant to be used for anything, this is just me learning abou
 - [x] MD2
 - [x] MD4
 - [x] MD5
+- [x] BLAKE
 
 ## How to build and test
 ### Dependencies

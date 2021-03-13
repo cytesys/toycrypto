@@ -45,4 +45,10 @@ namespace MD {
 	auto md5_file(const std::string& filename)->std::string;
 }
 
+namespace BLAKE {
+	auto blake256(const std::string& input, const std::string& salt)->std::string;
+	auto blake224(const std::string& input, const std::string& salt)->std::string;
+	auto blake384(const std::string& input, const std::string& salt)->std::string;
+	auto blake512(const std::string& input, const std::string& salt)->std::string;
+}
 #endif

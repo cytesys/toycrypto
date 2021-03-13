@@ -101,6 +101,38 @@ int main(int argc, char** argv)
 			else if (hash_type.compare("md5_file") == 0) {
 				output = MD::md5_file(input);
 			}
+			else if (hash_type.compare("blake224") == 0) {
+				if (argc > 3) {
+					output = BLAKE::blake224(input, argv[3]);
+				}
+				else {
+					output = BLAKE::blake224(input, "");
+				}
+			}
+			else if (hash_type.compare("blake256") == 0) {
+				if (argc > 3) {
+					output = BLAKE::blake256(input, argv[3]);
+				}
+				else {
+					output = BLAKE::blake256(input, "");
+				}
+			}
+			else if (hash_type.compare("blake384") == 0) {
+				if (argc > 3) {
+					output = BLAKE::blake384(input, argv[3]);
+				}
+				else {
+					output = BLAKE::blake384(input, "");
+				}
+			}
+			else if (hash_type.compare("blake512") == 0) {
+				if (argc > 3) {
+					output = BLAKE::blake512(input, argv[3]);
+				}
+				else {
+					output = BLAKE::blake512(input, "");
+				}
+			}
 			else {
 				std::cout << "Error: The hash type \"" << hash_type << "\" is not implemented!\n";
 				return 1;
