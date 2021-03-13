@@ -46,4 +46,4 @@ jobs:
           useVcpkgToolchainFile: false
 
       - name: Test
-        run: cd ${{ github.workspace }}/build && make test
+        run: cd ${{ github.workspace }}/build && ctest
