@@ -30,5 +30,5 @@ cmake ..
 make -j4
 
 # To run the tests
-make test
+ctest
 ```
