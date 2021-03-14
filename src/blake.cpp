@@ -93,11 +93,34 @@ void Blake32::load_salt(const str& salt) {
 	if (salt.length() == 0)
 		return;
 
-	if (salt.length() != 4)
-		throw "The salt must be of length 4 or 0!";
+	if (salt.length() > 16)
+		throw "The salt can only be 16 bytes or less!";
 
+	// Make an array named c_salt and fill it with zeroes
+	std::array<u8, 16> c_salt{ {} };
+	for (int i = 0; i < c_salt.size(); i++) {
+		c_salt[i] = 0x00;
+	}
+
+	// Copy the 16 bytes of salt into c_salt.
+	// If salt is shorter than 16 bytes, copy
+	// all the bytes into c_salt.
+	int salt_index = salt.length() - 1;
+	for (int i = 15; i >= 0; i--) {
+		c_salt.at(i) = salt[salt_index--];
+		if (salt_index < 0) {
+			break;
+		}
+	}
+
+	// Copy c_salt into m_salt
 	for (int i = 0; i < 4; i++) {
-		m_salt[i] = salt[i];
+		m_salt.at(i) = u8_to_u32(
+			c_salt.at((i * 4)),
+			c_salt.at((i * 4) + 1),
+			c_salt.at((i * 4) + 2),
+			c_salt.at((i * 4) + 3)
+		);
 	}
 }
 
@@ -338,11 +361,38 @@ void Blake64::load_salt(const str& salt) {
 	if (salt.length() == 0)
 		return;
 
-	if (salt.length() != 4)
-		throw "The salt must be of length 4 or 0!";
+	if (salt.length() > 32)
+		throw "The salt can only be 32 bytes or less!";
 
+	// Make an array named c_salt and fill it with zeroes
+	std::array<u8, 32> c_salt{ {} };
+	for (int i = 0; i < c_salt.size(); i++) {
+		c_salt[i] = 0x00;
+	}
+
+	// Copy the 32 bytes of salt into c_salt.
+	// If salt is shorter than 32 bytes, copy
+	// all the bytes into c_salt.
+	int salt_index = salt.length() - 1;
+	for (int i = 31; i >= 0; i--) {
+		c_salt.at(i) = salt[salt_index--];
+		if (salt_index < 0) {
+			break;
+		}
+	}
+
+	// Copy c_salt into m_salt
 	for (int i = 0; i < 4; i++) {
-		m_salt[i] = salt[i];
+		m_salt.at(i) = u8_to_u64(
+			c_salt.at((i * 8)),
+			c_salt.at((i * 8) + 1),
+			c_salt.at((i * 8) + 2),
+			c_salt.at((i * 8) + 3),
+			c_salt.at((i * 8) + 4),
+			c_salt.at((i * 8) + 5),
+			c_salt.at((i * 8) + 6),
+			c_salt.at((i * 8) + 7)
+		);
 	}
 }
 

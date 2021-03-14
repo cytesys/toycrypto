@@ -30,14 +30,6 @@ add_library(toycrypto STATIC
 
 add_executable(toycrypto_exec ./src/main.cpp)
 
-add_executable(testing 
-	./src/testing.cpp
-	./src/blake.hpp
-	./src/blake.cpp
-	./src/common.hpp
-	./src/common.cpp
-)
-
 set_target_properties(toycrypto PROPERTIES
     CXX_STANDARD_REQUIRED ON
 )
@@ -361,6 +353,11 @@ do_test("BLAKE224_long_nosalt" "blake224"
 	""
 	"^5fcf27f757e7a4ed78fc3ca1676d2043145c9ad4b9345b21eaea8b9e\n$"
 )
+do_test("BLAKE224_norm_withsalt" "blake224"
+	"The quick brown fox jumps over the lazy dog"
+	"abcd1234abcd1234"
+	"^2d401569ea7947ca7143aca587ca32a772f9b45c0a61e5df42670e42\n$"
+)
 
 # BLAKE256
 do_test("BLAKE256_empty_nosalt" "blake256"
@@ -377,6 +374,11 @@ do_test("BLAKE256_long_nosalt" "blake256"
 	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
 	""
 	"^86a10eea726d004de8bd794ffbc411909ea307ca2f390f92052fa49cd1dfe6ee\n$"
+)
+do_test("BLAKE256_long_withsalt" "blake256"
+	"The quick brown fox jumps over the lazy dog"
+	"abcd1234abcd1234"
+	"^1efcd67110ab34bb48dc8a63360654f54d20eafb9908258575cd0215ccc803cf\n$"
 )
 
 # BLAKE384
@@ -395,6 +397,11 @@ do_test("BLAKE384_long_nosalt" "blake384"
 	""
 	"^f6a6dc548b20b6d72007b94003e345eb488cc2f4fc16d814fa6ecd23a429f1111a3e3833223e48468649367bf955285f\n$"
 )
+do_test("BLAKE384_norm_withsalt" "blake384"
+	"The quick brown fox jumps over the lazy dog"
+	"abcd1234abcd123412345678abcdefgh"
+	"^b55722501f7b1b2d371277adce9717e82a4d16c295be00e9327cd6ad93653631190fec7908d4c65d9681f3d54c64f630\n$"
+)
 
 # BLAKE512
 do_test("BLAKE512_empty_nosalt" "blake512"
@@ -411,4 +418,9 @@ do_test("BLAKE512_long_nosalt" "blake512"
 	"However they were incorrectly rounded to the nearest integer instead of being rounded to the nearest odd integer, with equilibrated proportions of zero and one bits."
 	""
 	"^74a844bad83a17be5212ac174d79f8e0e2ce5545b5e1796e7ed938afbdf27081f231d5961bba36ac08895918b93cd0b610c9d7d94879cbbd74143fa898f835b0\n$"
+)
+do_test("BLAKE512_norm_withsalt" "blake512"
+	"The quick brown fox jumps over the lazy dog"
+	"abcd1234abcd123412345678abcdefgh"
+	"^b232e715aade9fef97f91073ceeb423f20d66ac1d8b339c9cb93ac0f8ddf542f5603183ac21df7b84a17ffdf851348581a471231771edb004b2e11de62ead0c3\n$"
 )
