@@ -1,6 +1,7 @@
 #include <array>
 #include <exception>
 #include <fstream>
+#include <iostream>
 #include "common.hpp"
 
 constexpr int CHUNK_SIZE = 64;
@@ -51,7 +52,7 @@ void SHA1::load_string(const str &input)
 	size_t length = input.length() * 8;
 	size_t offset = 0;
 	size_t index = 0;
-	
+
 	// Handle each chunk of the input
 	while (input.length() - offset >= CHUNK_SIZE) {
 		for (int i = 0; i < CHUNK_SIZE; i++)
@@ -60,13 +61,13 @@ void SHA1::load_string(const str &input)
 		handle();
 		offset += CHUNK_SIZE;
 	}
-	
+
 	// Load the rest of the input into chunk
 	for (int i = 0; i < (input.length() - offset); i++) {
 		m_chunk.at(i) = input[i + offset];
 		index++;
 	}
-	
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK_SIZE) {
@@ -80,15 +81,15 @@ void SHA1::load_string(const str &input)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + 8) < CHUNK_SIZE)
 		m_chunk.at(index++) = 0x00;
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8)
 		m_chunk.at(index++) = (length >> i) & 0xff;
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -99,7 +100,7 @@ void SHA1::load_file(const str &filename)
 	size_t filelen = 0;
 	size_t length = 0;
 	size_t index;
-	
+
 	// Open file
 	char* buffer = new char[CHUNK_SIZE] {};
 	std::ifstream infile(filename, std::ifstream::binary);
@@ -111,7 +112,7 @@ void SHA1::load_file(const str &filename)
     filelen = infile.tellg();
 	length = filelen * 8;
     infile.seekg (0, infile.beg);
-	
+
 	// Handle each chunk of the infile
 	while ((filelen - offset) >= CHUNK_SIZE) {
 		infile.read(buffer, CHUNK_SIZE);
@@ -129,7 +130,9 @@ void SHA1::load_file(const str &filename)
 	infile.read(buffer, index);
 	for (int i = 0; i < index; i++)
 		m_chunk.at(i) = buffer[i];
-	
+
+	infile.close();
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK_SIZE) {
@@ -144,17 +147,17 @@ void SHA1::load_file(const str &filename)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + 8) < CHUNK_SIZE) {
 		m_chunk.at(index++) = 0x00;
 	}
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8) {
 		m_chunk.at(index++) = (length >> i) & 0xff;
 	}
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -226,8 +229,12 @@ auto SHA1::output() const -> str
 {
 	str result = "";
 
-	for (u32 i : m_h) {
-		result += u32_to_hex(i);
+	try {
+		for (u32 i : m_h) {
+			result += u32_to_hex(i);
+		}
+	} catch (std::exception const& ex) {
+		std::cout << ex.what() << std::endl;
 	}
 
 	return result;

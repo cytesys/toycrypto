@@ -1,6 +1,7 @@
 #include <array>
 #include <exception>
 #include <fstream>
+#include <iostream>
 #include "common.hpp"
 
 // Constants
@@ -143,7 +144,7 @@ SHA2_32::SHA2_32(int type)
 			throw std::invalid_argument("The SHA2 type supplied is invalid or not implemented.");
 			break;
 	}
-	
+
 	m_type = type;
 }
 
@@ -153,11 +154,11 @@ void SHA2_32::load_file(const str &filename)
 	size_t length = 0;
 	size_t index = 0;
 	size_t filelen = 0;
-	
+
 	// Open file
 	char* buffer = new char[CHUNK32_SIZE] {};
 	std::ifstream infile(filename, std::ifstream::binary);
-	
+
 	if (!infile.good())
 		throw "Could not open file!";
 
@@ -166,25 +167,27 @@ void SHA2_32::load_file(const str &filename)
     filelen = infile.tellg();
 	length = filelen * 8;
     infile.seekg (0, infile.beg);
-	
+
 	// Handle each chunk of the input
 	while ((filelen - offset) >= CHUNK32_SIZE) {
 		infile.read(buffer, CHUNK32_SIZE);
 		for (int i = 0; i < CHUNK32_SIZE; i++) {
 			m_chunk.at(i) = buffer[i];
 		}
-		
+
 		handle();
 		offset += CHUNK32_SIZE;
 	}
-	
+
 	// Load the rest of the input into buffer
 	index = filelen % CHUNK32_SIZE;
 	infile.read(buffer, index);
 	for (int i = 0; i < index; i++) {
 		m_chunk.at(i) = buffer[i];
 	}
-	
+
+	infile.close();
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK32_SIZE) {
@@ -199,16 +202,16 @@ void SHA2_32::load_file(const str &filename)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + 8) < CHUNK32_SIZE)
 		m_chunk.at(index++) = 0x00;
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8) {
 		m_chunk.at(index++) = (length >> i) & 0xff;
 	}
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -218,24 +221,24 @@ void SHA2_32::load_string(const str &input)
 	size_t length = input.length() * 8;
 	size_t offset = 0;
 	size_t index = 0;
-	
+
 	// Handle each chunk of the input
 	while (input.length() - offset >= CHUNK32_SIZE) {
 		for (int i = 0; i < CHUNK32_SIZE; i++) {
 			m_chunk.at(i) = input[i + offset];
 		}
-		
+
 		handle();
 		offset += CHUNK32_SIZE;
 	}
-	
+
 	// Load the rest of the input into chunk
 	index = 0;
 	for (int i = 0; i < (input.length() - offset); i++) {
 		m_chunk.at(i) = input[i + offset];
 		index++;
 	}
-	
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK32_SIZE) {
@@ -249,16 +252,16 @@ void SHA2_32::load_string(const str &input)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + sizeof(length)) < CHUNK32_SIZE)
 		m_chunk.at(index++) = 0x00;
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8) {
 		m_chunk.at(index++) = (length >> i) & 0xff;
 	}
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -328,8 +331,12 @@ auto SHA2_32::output() const -> str
 {
 	str result = "";
 
-	for (int i = 0; i < (m_type / 32); i++) {
-		result += u32_to_hex(m_h.at(i));
+	try{
+		for (int i = 0; i < (m_type / 32); i++) {
+			result += u32_to_hex(m_h.at(i));
+		}
+	} catch (std::exception const& ex) {
+		std::cout << ex.what() << std::endl;
 	}
 
 	return result;
@@ -378,7 +385,7 @@ SHA2_64::SHA2_64(int type, int subtype)
 			throw std::invalid_argument("The SHA2 type supplied is invalid or not implemented");
 			break;
 	}
-	
+
 	m_type = type;
 	m_subtype = subtype;
 }
@@ -389,35 +396,37 @@ void SHA2_64::load_file(const str &filename)
 	size_t filelen = 0;
 	size_t index = 0;
 	size_t length = 0;
-	
+
 	// Open file
 	char* buffer = new char[CHUNK64_SIZE] {};
 	std::ifstream infile(filename, std::ifstream::binary);
 	if (!infile.good())
 		throw "Could not open file!";
-	
+
 	// Get infile length
 	infile.seekg (0, infile.end);
     filelen = infile.tellg();
 	length = filelen * 8;
     infile.seekg (0, infile.beg);
-	
+
 	// Handle each chunk of the input
 	while ((filelen - offset) >= CHUNK64_SIZE) {
 		infile.read(buffer, CHUNK64_SIZE);
 		for (int i = 0; i < CHUNK64_SIZE; i++)
 			m_chunk.at(i) = buffer[i];
-		
+
 		handle();
 		offset += CHUNK64_SIZE;
 	}
-	
+
 	// Load the rest of the input into buffer
 	index = filelen % CHUNK64_SIZE;
 	infile.read(buffer, index);
 	for (int i = 0; i < index; i++)
 		m_chunk.at(i) = buffer[i];
-	
+
+	infile.close();
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK64_SIZE) {
@@ -431,15 +440,15 @@ void SHA2_64::load_file(const str &filename)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + 8) < CHUNK64_SIZE)
 		m_chunk.at(index++) = 0x00;
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8)
 		m_chunk.at(index++) = (length >> i) & 0xff;
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -450,23 +459,23 @@ void SHA2_64::load_string(const str &input)
 	size_t length = input.length() * 8;
 	size_t offset = 0;
 	size_t index;
-	
+
 	// Handle each chunk of the input
 	while (input.length() - offset >= CHUNK64_SIZE) {
 		for (int i = 0; i < CHUNK64_SIZE; i++)
 			m_chunk.at(i) = input[i + offset];
-		
+
 		handle();
 		offset += CHUNK64_SIZE;
 	}
-	
+
 	// Load the rest of the input into chunk
 	index = 0;
 	for (int i = 0; i < (input.length() - offset); i++) {
 		m_chunk.at(i) = input[i + offset];
 		index++;
 	}
-	
+
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
 	if ((index + 8) > CHUNK64_SIZE) {
@@ -480,15 +489,15 @@ void SHA2_64::load_string(const str &input)
 		handle();
 		index = 0;
 	}
-	
+
 	// Pad with zeroes
 	while ((index + 8) < CHUNK64_SIZE)
 		m_chunk.at(index++) = 0x00;
-	
+
 	// Append message length
 	for (int i = 56; i >= 0; i-=8)
 		m_chunk.at(index++) = (length >> i) & 0xff;
-	
+
 	// Handle the chunk
 	handle();
 }
@@ -564,24 +573,28 @@ auto SHA2_64::output() const -> str
 	str result = "";
 	int index;
 
-	if (m_type == 512 && m_subtype != 0) {
-		for (int i = 0; i < (m_subtype / 32); i++) {
-			if (i % 2 == 0) {
-				index = i / 2;
-				result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
-			} else {
-				result += u32_to_hex(m_h.at(index) & 0xffffffff);
+	try {
+		if (m_type == 512 && m_subtype != 0) {
+			for (int i = 0; i < (m_subtype / 32); i++) {
+				if (i % 2 == 0) {
+					index = i / 2;
+					result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
+				} else {
+					result += u32_to_hex(m_h.at(index) & 0xffffffff);
+				}
+			}
+		} else {
+			for (int i = 0; i < (m_type / 32); i++) {
+				if (i % 2 == 0) {
+					index = i / 2;
+					result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
+				} else {
+					result += u32_to_hex(m_h.at(index) & 0xffffffff);
+				}
 			}
 		}
-	} else {
-		for (int i = 0; i < (m_type / 32); i++) {
-			if (i % 2 == 0) {
-				index = i / 2;
-				result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
-			} else {
-				result += u32_to_hex(m_h.at(index) & 0xffffffff);
-			}
-		}
+	} catch (std::exception const& ex) {
+		std::cout << ex.what() << std::endl;
 	}
 
 	return result;
@@ -594,77 +607,77 @@ namespace SHA {
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha224_file(const str &filename) -> str
 	{
 		SHA2_32 inst(224);
 		inst.load_file(filename);
 		return inst.output();
 	}
-	
+
 	auto sha256(const str &input) -> str
 	{
 		SHA2_32 inst(256);
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha256_file(const str &filename) -> str
 	{
 		SHA2_32 inst(256);
 		inst.load_file(filename);
 		return inst.output();
 	}
-	
+
 	auto sha384(const str &input) -> str
 	{
 		SHA2_64 inst(384, 0);
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha384_file(const str &filename) -> str
 	{
 		SHA2_64 inst(384, 0);
 		inst.load_file(filename);
 		return inst.output();
 	}
-	
+
 	auto sha512(const str &input) -> str
 	{
 		SHA2_64 inst(512, 0);
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha512_file(const str &filename) -> str
 	{
 		SHA2_64 inst(512, 0);
 		inst.load_file(filename);
 		return inst.output();
 	}
-	
+
 	auto sha512_224(const str &input) -> str
 	{
 		SHA2_64 inst(512, 224);
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha512_224_file(const str &filename) -> str
 	{
 		SHA2_64 inst(512, 224);
 		inst.load_file(filename);
 		return inst.output();
 	}
-	
+
 	auto sha512_256(const str &input) -> str
 	{
 		SHA2_64 inst(512, 256);
 		inst.load_string(input);
 		return inst.output();
 	}
-	
+
 	auto sha512_256_file(const str &filename) -> str
 	{
 		SHA2_64 inst(512, 256);

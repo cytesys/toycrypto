@@ -1,5 +1,6 @@
 #include <array>
 #include <fstream>
+#include <iostream>
 #include "common.hpp"
 
 constexpr std::array<u8, 256> S = {
@@ -90,6 +91,8 @@ void MD2::load_file(const str& filename)
 		index++;
 	}
 
+	infile.close();
+
 	// Apply padding
 	u8 rounds = 16 - (filelen % 16);
 	for (int i = 0; i < rounds; i++)
@@ -175,8 +178,12 @@ auto MD2::output() const -> str
 {
 	str result = "";
 
-	for (int i = 0; i < 16; i++) {
-		result += u8_to_hex(m_x.at(i));
+	try {
+		for (int i = 0; i < 16; i++) {
+			result += u8_to_hex(m_x.at(i));
+		}
+	} catch (std::exception const& ex) {
+		std::cout << ex.what() << std::endl;
 	}
 
 	return result;

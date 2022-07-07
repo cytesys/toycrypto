@@ -1,6 +1,7 @@
 #include <array>
 #include <cmath>
 #include <fstream>
+#include <iostream>
 #include "common.hpp"
 
 
@@ -206,6 +207,8 @@ void MD4::load_file(const str &filename)
 		}
 	}
 
+	infile.close();
+
 	switch ((filelen - offset)) {
 	case 0:
 		m_x.at(index++) = u8_to_u32(
@@ -326,10 +329,14 @@ void MD4::handle()
 auto MD4::output() const -> str
 {
 	str result = "";
-	result += u32_to_hex(reverse_u32(m_a));
-	result += u32_to_hex(reverse_u32(m_b));
-	result += u32_to_hex(reverse_u32(m_c));
-	result += u32_to_hex(reverse_u32(m_d));
+	try {
+		result += u32_to_hex(reverse_u32(m_a));
+		result += u32_to_hex(reverse_u32(m_b));
+		result += u32_to_hex(reverse_u32(m_c));
+		result += u32_to_hex(reverse_u32(m_d));
+	} catch (std::exception const& ex) {
+		std::cout << ex.what() << std::endl;
+	}
 	return result;
 }
 
