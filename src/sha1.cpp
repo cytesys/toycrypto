@@ -49,7 +49,7 @@ private:
 
 void SHA1::load_string(const str &input)
 {
-	size_t length = input.length() * 8;
+	u64 length = input.length() * 8;
 	size_t offset = 0;
 	size_t index = 0;
 
@@ -98,7 +98,7 @@ void SHA1::load_file(const str &filename)
 {
 	size_t offset = 0;
 	size_t filelen = 0;
-	size_t length = 0;
+	u64 length = 0;
 	size_t index;
 
 	// Open file
@@ -132,6 +132,7 @@ void SHA1::load_file(const str &filename)
 		m_chunk.at(i) = buffer[i];
 
 	infile.close();
+	delete[] buffer;
 
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;

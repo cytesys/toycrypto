@@ -92,6 +92,7 @@ void MD2::load_file(const str& filename)
 	}
 
 	infile.close();
+	delete[] buffer;
 
 	// Apply padding
 	u8 rounds = 16 - (filelen % 16);

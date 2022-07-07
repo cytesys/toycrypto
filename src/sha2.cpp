@@ -151,7 +151,7 @@ SHA2_32::SHA2_32(int type)
 void SHA2_32::load_file(const str &filename)
 {
 	size_t offset = 0;
-	size_t length = 0;
+	u64 length = 0;
 	size_t index = 0;
 	size_t filelen = 0;
 
@@ -187,6 +187,7 @@ void SHA2_32::load_file(const str &filename)
 	}
 
 	infile.close();
+	delete [] buffer;
 
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
@@ -218,7 +219,7 @@ void SHA2_32::load_file(const str &filename)
 
 void SHA2_32::load_string(const str &input)
 {
-	size_t length = input.length() * 8;
+	u64 length = input.length() * 8;
 	size_t offset = 0;
 	size_t index = 0;
 
@@ -395,7 +396,7 @@ void SHA2_64::load_file(const str &filename)
 	size_t offset = 0;
 	size_t filelen = 0;
 	size_t index = 0;
-	size_t length = 0;
+	u64 length = 0;
 
 	// Open file
 	char* buffer = new char[CHUNK64_SIZE] {};
@@ -426,6 +427,7 @@ void SHA2_64::load_file(const str &filename)
 		m_chunk.at(i) = buffer[i];
 
 	infile.close();
+	delete[] buffer;
 
 	// Apply padding
 	m_chunk.at(index++) = PADDING_BYTE;
@@ -456,7 +458,7 @@ void SHA2_64::load_file(const str &filename)
 void SHA2_64::load_string(const str &input)
 {
 	// Initialize message length
-	size_t length = input.length() * 8;
+	u64 length = input.length() * 8;
 	size_t offset = 0;
 	size_t index;
 

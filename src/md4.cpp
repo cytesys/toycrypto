@@ -47,7 +47,7 @@ private:
 
 void MD4::load_string(const str& input)
 {
-	size_t length = input.length() * 8;
+	u64 length = input.length() * 8;
 	size_t offset = 0;
 	size_t index = 0;
 
@@ -151,7 +151,7 @@ void MD4::load_string(const str& input)
 void MD4::load_file(const str &filename)
 {
 	size_t offset = 0;
-	size_t length = 0;
+	u64 length = 0;
 	size_t filelen = 0;
 	size_t index = 0;
 	size_t buffer_index = 0;
@@ -245,6 +245,8 @@ void MD4::load_file(const str &filename)
 	default:
 		break;
 	}
+	
+	delete[] buffer;
 
 	// Pad with zeroes
 	while (index + 2 < 16)
