@@ -41,9 +41,8 @@ jobs:
       - name: Run CMake
         uses: lukka/run-cmake@main
         with: 
-          cmakeListsTxtPath: ${{ github.workspace }}/CMakeLists.txt
-          buildDirectory: ${{ github.workspace }}/build
-          useVcpkgToolchainFile: false
+          configurePreset: 'default'
+          buildPreset: 'default'
 
       - name: Run CTest
         if: ${{matrix.os == 'ubuntu-latest'}}
