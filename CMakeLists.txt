@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.20)
 
 # project name
-project(toycrypto VERSION 0.0.1)
+project(toycrypto VERSION 1.1)
 
 set(CMAKE_CXX_STANDARD 11)
 
