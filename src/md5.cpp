@@ -1,8 +1,12 @@
 #include <array>
-#include <cmath>
-#include <fstream>
 #include <iostream>
+
 #include "common.hpp"
+#include "toycrypto.hpp"
+
+#define CHUNK_SIZE 16
+#define CHUNK_BYTES 64
+#define PADDING_BYTE 0x80
 
 constexpr std::array<u32, 64> K = {
 	0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
@@ -32,239 +36,105 @@ constexpr std::array<unsigned int, 64> S = {
 
 class MD5 {
 public:
-	void load_string(const str& input);
-	void load_file(const str& filename);
-	auto output() const -> str;
+	auto hexdigest(std::istream* const input)->std::string* const;
 
 private:
-	std::array<u32, 16> m_x{ {} };
+	std::array<u32, CHUNK_SIZE> m_x{ {} };
 	u32 m_a = 0x67452301;
 	u32 m_b = 0xefcdab89;
 	u32 m_c = 0x98badcfe;
 	u32 m_d = 0x10325476;
 
+	void load(std::istream* const input);
 	void handle();
+
+	// For debugging purposes
+	void print_x() const;
 };
 
-void MD5::load_string(const str& input)
-{
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index = 0;
-
-	while (input.length() - offset >= 64) {
-		// Load bytes from input into the chunk buffer
-		// Store data in 32-bit words
-		for (int i = 0; i < 16; i++) {
-			m_x.at(i) = u8_to_u32(
-				input[(i * 4) + offset + 3],
-				input[(i * 4) + offset + 2],
-				input[(i * 4) + offset + 1],
-				input[(i * 4) + offset]
-			);
+// For debugging purposes
+void MD5::print_x() const {
+	unsigned int i;
+	for (i = 0; i < m_x.size(); i++) {
+		std::cout << to_hex<u32>(m_x.at(i)) << " ";
+		if ((i + 1) % 4 == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << "- ";
 		}
-
-		handle();
-		offset += 64;
 	}
-
-	// Load the remaining whole 32-bit words from input
-	if ((input.length() - offset) >= 4) {
-		int rem_whole = std::floor((input.length() - offset) / 4);
-		size_t new_offset = offset;
-
-		for (int i = 0; i < (rem_whole * 4); i += 4) {
-			m_x.at(index++) = u8_to_u32(
-				input[i + offset + 3],
-				input[i + offset + 2],
-				input[i + offset + 1],
-				input[i + offset]
-			);
-
-			new_offset += 4;
-		}
-		offset = new_offset;
-	}
-
-	// Load the remaining bytes from input
-	switch ((input.length() - offset)) {
-	case 0:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x00,
-			0x80
-		);
-		break;
-	case 1:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x80,
-			input[offset]
-		);
-		break;
-	case 2:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x80,
-			input[offset + 1],
-			input[offset]
-		);
-		break;
-	case 3:
-		m_x.at(index++) = u8_to_u32(
-			0x80,
-			input[offset + 2],
-			input[offset + 1],
-			input[offset]
-		);
-		break;
-	default:
-		break;
-	}
-
-	if (index + 2 > 16) {
-		while (index < 16) {
-			m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
-		}
-
-		handle();
-		index = 0;
-	}
-
-	// Pad with zeroes
-	while (index + 2 < 16) {
-		m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
-	}
-
-	// Append the message length
-	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
-
-	handle();
+	std::cout << std::endl;
 }
 
-void MD5::load_file(const str &filename)
-{
-	size_t offset = 0;
-	size_t filelen = 0;
+auto MD5::hexdigest(std::istream* const input) -> std::string* const {
+	load(input);
+
+	static str result = "";
+	result += to_hex<u32>(m_a, true);
+	result += to_hex<u32>(m_b, true);
+	result += to_hex<u32>(m_c, true);
+	result += to_hex<u32>(m_d, true);
+	return &result;
+}
+
+void MD5::load(std::istream* const input) {
 	u64 length = 0;
-	size_t index = 0;
-	size_t buffer_index = 0;
+	size_t read = 0;
+	unsigned int i;
+	char* buffer = new char[CHUNK_BYTES];
 
-	// Open the file
-	char* buffer = new char[64];
-	std::ifstream infile(filename, std::ifstream::binary);
-	if (!infile.good())
-		throw "Could not open file!";
-
-	// Get file length
-	infile.seekg(0, infile.end);
-	filelen = infile.tellg();
-	length = filelen * 8;
-	infile.seekg(0, infile.beg);
-
-	while ((filelen - offset) >= 64) {
-		// Load 16 bytes into the chunk
-		infile.read(buffer, 64);
-		for (int i = 0; i < 16; i++) {
-			m_x.at(i) = u8_to_u32(
-				buffer[(i * 4) + 3],
-				buffer[(i * 4) + 2],
-				buffer[(i * 4) + 1],
-				buffer[(i * 4)]
-			);
+	// Read in the data in chunks
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("Could not read data!");
 		}
 
-		handle();
-		offset += 64;
-	}
+		read = input->readsome(buffer, CHUNK_BYTES);
+		length += read * 8;
 
-	// Load the remaining whole 32-bit words from input
-	if ((filelen - offset) > 0) {
-		infile.read(buffer, (filelen - offset));
-		if ((filelen - offset) >= 4) {
-			int rem_whole = std::floor((filelen - offset) / 4);
-			size_t new_offset = offset;
-
-			for (int i = 0; i < (rem_whole * 4); i += 4) {
-				m_x.at(index++) = u8_to_u32(
-					buffer[i + 3],
-					buffer[i + 2],
-					buffer[i + 1],
-					buffer[i]
-				);
-
-				new_offset += 4;
-				buffer_index += 4;
-			}
-			offset = new_offset;
+		// Read in whole dwords
+		for (i = 0; i < (read / 4); i++) {
+			m_x.at(i) = load_le<u32>(buffer, CHUNK_BYTES, i * 4);
 		}
-	}
 
-	infile.close();
+		// Read in the rest
+		if ((read % 4) > 0) {
+			m_x.at(i) = load_le<u32>(buffer, CHUNK_BYTES, i * 4, read % 4);
+		}
 
-	switch ((filelen - offset)) {
-	case 0:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x00,
-			0x80
-		);
-		break;
-	case 1:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x80,
-			buffer[buffer_index]
-		);
-		break;
-	case 2:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x80,
-			buffer[buffer_index + 1],
-			buffer[buffer_index]
-		);
-		break;
-	case 3:
-		m_x.at(index++) = u8_to_u32(
-			0x80,
-			buffer[buffer_index + 2],
-			buffer[buffer_index + 1],
-			buffer[buffer_index]
-		);
-		break;
-	default:
-		break;
+		if (read == CHUNK_BYTES) {
+			handle();
+			read = 0;
+		}
 	}
 
 	delete[] buffer;
 
-	// Pad with zeroes
-	while (index + 2 < 16)
-		m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
+	// Add the padding byte
+	m_x.at(read / 4) ^= xor_mask_le<u32>(PADDING_BYTE, read);
+
+	// Make a new block if the length don't fit
+	if (read + 8 >= CHUNK_BYTES) {
+		handle();
+	}
 
 	// Append the message length
-	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
+	m_x.at(CHUNK_SIZE - 2) = length & U32MAX;
+	m_x.at(CHUNK_SIZE - 1) = (length >> 32) & U32MAX;
 
 	handle();
 }
 
-void MD5::handle()
-{
-	//_debug();
+void MD5::handle() {
+	//print_x();
+	unsigned int i;
 
 	u32 a = m_a;
 	u32 b = m_b;
 	u32 c = m_c;
 	u32 d = m_d;
 
-	for (int i = 0; i < 64; i++) {
+	for (i = 0; i < 64; i++) {
 		u32 f, g;
 		if (i >=0 && i <=15) {
 			f = (b & c) | ((~b) & d);
@@ -284,41 +154,18 @@ void MD5::handle()
 		a = d;
 		d = c;
 		c = b;
-		b = b + leftrotate_u32(f, S[i]);
+		b = b + rotateleft<u32>(f, S[i]);
 	}
 
 	m_a += a;
 	m_b += b;
 	m_c += c;
 	m_d += d;
+
+	m_x.fill(0);
 }
 
-auto MD5::output() const -> str
-{
-	str result = "";
-	try {
-		result += u32_to_hex(reverse_u32(m_a));
-		result += u32_to_hex(reverse_u32(m_b));
-		result += u32_to_hex(reverse_u32(m_c));
-		result += u32_to_hex(reverse_u32(m_d));
-	} catch (std::exception const& ex) {
-		std::cout << ex.what() << std::endl;
-	}
-	return result;
-}
-
-namespace MD {
-	auto md5(const str& input) -> str
-	{
-		MD5 instance = MD5();
-		instance.load_string(input);
-		return instance.output();
-	}
-
-	auto md5_file(const str& filename) -> str
-	{
-		MD5 instance = MD5();
-		instance.load_file(filename);
-		return instance.output();
-	}
+auto TC::MD::md5(std::istream* const input) -> std::string* const {
+	MD5 inst = MD5();
+	return inst.hexdigest(input);
 }

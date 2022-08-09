@@ -1,3 +1,4 @@
-CMakeSettings.json
 .vs
-out
+CMakeSettings.json
+build
+tools

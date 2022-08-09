@@ -1,7 +1,10 @@
 #include <array>
-#include <fstream>
 #include <iostream>
+
 #include "common.hpp"
+#include "toycrypto.hpp"
+
+#define CHUNK_SIZE 16
 
 constexpr std::array<u8, 256> S = {
 	0x29, 0x2E, 0x43, 0xC9, 0xA2, 0xD8, 0x7C, 0x01,
@@ -40,107 +43,66 @@ constexpr std::array<u8, 256> S = {
 
 class MD2 {
 public:
-	void load_string(const str &input);
-	void load_file(const str &filename);
-	auto output() const-> str;
+	auto hexdigest(std::istream* const input)->std::string* const;
 private:
-	std::array<u8, 16> m_chunk{ {} };
+	std::array<u8, CHUNK_SIZE> m_chunk{ {} };
 	std::array<u8, 16> m_c{ {} };
 	std::array<u8, 48> m_x{ {} };
 	u8 m_l = 0;
 
+	void load(std::istream* const input);
 	void checksum_round();
 	void handle();
 };
 
-void MD2::load_file(const str& filename)
+auto MD2::hexdigest(std::istream* const input) -> std::string* const {
+	unsigned int i;
+
+	load(input);
+
+	static std::string result = "";
+
+	for (i = 0; i < CHUNK_SIZE; i++) {
+		result += to_hex<u8>(m_x.at(i));
+	}
+
+	return &result;
+}
+
+void MD2::load(std::istream* const input)
 {
-	size_t offset = 0;
-	size_t filelen = 0;
-	size_t index = 0;
+	size_t read = 0;
+	unsigned int i;
+	char* buffer = new char[CHUNK_SIZE];
 
-	// Open the file
-	char* buffer = new char[16];
-	std::ifstream infile(filename, std::ifstream::binary);
+	// Read in the data in chunks
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("Can not read from file!");
+		}
 
-	if (!infile.good())
-		throw "Could not open file!";
-
-	// Get the file length
-	infile.seekg(0, infile.end);
-	filelen = infile.tellg();
-	infile.seekg(0, infile.beg);
-
-	while ((filelen - offset) >= 16) {
-		// Load 16 bytes into the chunk
-		infile.read(buffer, 16);
-		for (int i = 0; i < 16; i++)
+		read = input->readsome(buffer, CHUNK_SIZE);
+		for (i = 0; i < read; i++) {
 			m_chunk.at(i) = buffer[i];
+		}
 
-		checksum_round();
-		handle();
-
-		offset += 16;
+		if (read == CHUNK_SIZE) {
+			handle();
+			read = 0;
+		}
 	}
 
-	// Load the rest of the input into the chunk
-	index = 0;
-	infile.read(buffer, filelen % 16);
-	for (int i = 0; i < (filelen % 16); i++) {
-		m_chunk.at(i) = buffer[i];
-		index++;
-	}
-
-	infile.close();
 	delete[] buffer;
 
 	// Apply padding
-	u8 rounds = 16 - (filelen % 16);
-	for (int i = 0; i < rounds; i++)
-		m_chunk.at(index++) = rounds;
+	u8 rounds = CHUNK_SIZE - (read % CHUNK_SIZE);
+	for (i = 0; i < rounds; i++)
+		m_chunk.at(read++) = rounds;
 
-	checksum_round();
 	handle();
 
 	// Apply checksum
-	for (int i = 0; i < 16; i++)
-		m_chunk.at(i) = m_c[i];
-
-	handle();
-}
-
-void MD2::load_string(const str &input)
-{
-	size_t offset = 0;
-	size_t index = 0;
-
-	while ((input.length() - offset) >= 16) {
-		// Load 16 bytes into the chunk
-		for (int i = 0; i < 16; i++)
-			m_chunk.at(i) = input[offset + i];
-
-		checksum_round();
-		handle();
-		offset += 16;
-	}
-
-	// Load the rest of the input into the chunk
-	index = 0;
-	for (int i = 0; i < (input.length() % 16); i++) {
-		m_chunk.at(i) = input[offset + i];
-		index++;
-	}
-
-	// Apply padding
-	u8 rounds = 16 - (input.length() % 16);
-	for (int i = 0; i < rounds; i++)
-		m_chunk.at(index++) = rounds;
-
-	checksum_round();
-	handle();
-
-	// Apply checksum
-	for (int i = 0; i < 16; i++)
+	for (i = 0; i < CHUNK_SIZE; i++)
 		m_chunk.at(i) = m_c[i];
 
 	handle();
@@ -148,7 +110,8 @@ void MD2::load_string(const str &input)
 
 void MD2::checksum_round()
 {
-	for (int j = 0; j < 16; j++) {
+	unsigned int j;
+	for (j = 0; j < CHUNK_SIZE; j++) {
 		u8 by = m_chunk.at(j);
 		m_c.at(j) ^= S.at(by ^ m_l);
 		m_l = m_c.at(j);
@@ -157,51 +120,30 @@ void MD2::checksum_round()
 
 void MD2::handle()
 {
-	for (int j = 0; j < 16; j++) {
-		m_x.at(16 + j) = m_chunk.at(j);
-		m_x.at(32 + j) = m_x.at(16 + j) ^ m_x.at(j);
+	size_t j;
+	unsigned int k;
+
+	checksum_round();
+	for (j = 0; j < 16; j++) {
+		m_x.at(j + 16) = m_chunk.at(j);
+		m_x.at(j + 32) = m_x.at(j + 16) ^ m_x.at(j);
 	}
 
-	u8 t = 0x00;
+	u8 t = 0;
 
-	for (int j = 0; j < 18; j++) {
-		for (int k = 0; k < 48; k++) {
+	for (j = 0; j < 18; j++) {
+		for (k = 0; k < 48; k++) {
 			u8 temp = m_x.at(k) ^ S.at(t);
 			t = temp;
 			m_x.at(k) = temp;
 		}
 
-		t = (t + j) % 256;
+		t = (u8)(t + j);
 	}
 }
 
-auto MD2::output() const -> str
+auto TC::MD::md2(std::istream* const input) -> std::string* const
 {
-	str result = "";
-
-	try {
-		for (int i = 0; i < 16; i++) {
-			result += u8_to_hex(m_x.at(i));
-		}
-	} catch (std::exception const& ex) {
-		std::cout << ex.what() << std::endl;
-	}
-
-	return result;
-}
-
-namespace MD {
-	auto md2(const str& input) -> str
-	{
-		MD2 inst = MD2();
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto md2_file(const str& filename) -> str
-	{
-		MD2 inst = MD2();
-		inst.load_file(filename);
-		return inst.output();
-	}
+	MD2 inst = MD2();
+	return inst.hexdigest(input);
 }

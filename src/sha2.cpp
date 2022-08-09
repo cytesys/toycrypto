@@ -1,16 +1,17 @@
 #include <array>
-#include <exception>
-#include <fstream>
 #include <iostream>
-#include "common.hpp"
 
-// Constants
-constexpr unsigned int CHUNK32_SIZE = 64;
-constexpr unsigned int CHUNK64_SIZE = 128;
-constexpr u8 PADDING_BYTE = 0x80;
+#include "common.hpp"
+#include "toycrypto.hpp"
+
+#define T_BYTES sizeof(T)
+#define T_BITS (T_BYTES * 8)
+
+#define BLOCK_SIZE 16
+#define BLOCK_BYTES (BLOCK_SIZE * T_BYTES)
 
 // Constant values for H
-constexpr unsigned int H_SIZE = 8;
+#define H_SIZE 8
 constexpr std::array<u32, H_SIZE> H_SHA224 = {
 	0xc1059ed8, 0x367cd507,
 	0x3070dd17, 0xf70e5939,
@@ -51,8 +52,11 @@ constexpr std::array<u64, H_SIZE> H_SHA512_256 = {
 };
 
 // Constants for K
-constexpr unsigned int K32_SIZE = 64;
-constexpr unsigned int K64_SIZE = 80;
+#define K32_SIZE 64
+#define K64_SIZE 80
+
+#define K_SIZE ((std::is_same<T, u64>::value) ? K64_SIZE : K32_SIZE)
+
 constexpr std::array<u32, K32_SIZE> K32 = {
 	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
 	0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -114,261 +118,32 @@ constexpr std::array<u64, K64_SIZE> K64 = {
 	0x5fcb6fab3ad6faec, 0x6c44198c4a475817
 };
 
-// A class for the "32-bit" version of SHA2
-class SHA2_32 {
+template<class T>
+class SHA2 {
 public:
-	explicit SHA2_32(int type);
-	void load_string(const str &input);
-	void load_file(const str &filename);
-	auto output() const -> str;
+	SHA2(unsigned int type, unsigned int subtype = 0);
+	auto hexdigest(std::istream* const input) -> std::string* const;
 
 private:
-	std::array<u32, H_SIZE> m_h{ {} };
-	std::array<u32, K32_SIZE> m_k = K32;
-	std::array<u8, CHUNK32_SIZE> m_chunk{ {} };
-	int m_type;
+	std::array<T, H_SIZE> m_h = {};
+	std::array<T, BLOCK_SIZE> m_block = {};
 
-	void handle();
+	unsigned int m_type;
+	unsigned int m_subtype;
+
+	void load(std::istream* const input);
+	void comp();
+
+	// For debugging
+	void print_block() const;
 };
 
-SHA2_32::SHA2_32(int type)
-{
-	switch(type) {
-		case 224:
-			m_h = H_SHA224;
-			break;
-		case 256:
-			m_h = H_SHA256;
-			break;
-		default:
-			throw std::invalid_argument("The SHA2 type supplied is invalid or not implemented.");
-			break;
-	}
-
-	m_type = type;
-}
-
-void SHA2_32::load_file(const str &filename)
-{
-	size_t offset = 0;
-	u64 length = 0;
-	size_t index = 0;
-	size_t filelen = 0;
-
-	// Open file
-	char* buffer = new char[CHUNK32_SIZE] {};
-	std::ifstream infile(filename, std::ifstream::binary);
-
-	if (!infile.good())
-		throw "Could not open file!";
-
-	// Get infile length
-	infile.seekg (0, infile.end);
-    filelen = infile.tellg();
-	length = filelen * 8;
-    infile.seekg (0, infile.beg);
-
-	// Handle each chunk of the input
-	while ((filelen - offset) >= CHUNK32_SIZE) {
-		infile.read(buffer, CHUNK32_SIZE);
-		for (int i = 0; i < CHUNK32_SIZE; i++) {
-			m_chunk.at(i) = buffer[i];
-		}
-
-		handle();
-		offset += CHUNK32_SIZE;
-	}
-
-	// Load the rest of the input into buffer
-	index = filelen % CHUNK32_SIZE;
-	infile.read(buffer, index);
-	for (int i = 0; i < index; i++) {
-		m_chunk.at(i) = buffer[i];
-	}
-
-	infile.close();
-	delete [] buffer;
-
-	// Apply padding
-	m_chunk.at(index++) = PADDING_BYTE;
-	if ((index + 8) > CHUNK32_SIZE) {
-		/*
-		If there isn't enough space for the message length
-		then fill the rest of the chunk with zeroes, handle
-		the chunk and continue.
-		*/
-		while (index < CHUNK32_SIZE) {
-			m_chunk.at(index++) = 0x00;
-		}
-		handle();
-		index = 0;
-	}
-
-	// Pad with zeroes
-	while ((index + 8) < CHUNK32_SIZE)
-		m_chunk.at(index++) = 0x00;
-
-	// Append message length
-	for (int i = 56; i >= 0; i-=8) {
-		m_chunk.at(index++) = (length >> i) & 0xff;
-	}
-
-	// Handle the chunk
-	handle();
-}
-
-void SHA2_32::load_string(const str &input)
-{
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index = 0;
-
-	// Handle each chunk of the input
-	while (input.length() - offset >= CHUNK32_SIZE) {
-		for (int i = 0; i < CHUNK32_SIZE; i++) {
-			m_chunk.at(i) = input[i + offset];
-		}
-
-		handle();
-		offset += CHUNK32_SIZE;
-	}
-
-	// Load the rest of the input into chunk
-	index = 0;
-	for (int i = 0; i < (input.length() - offset); i++) {
-		m_chunk.at(i) = input[i + offset];
-		index++;
-	}
-
-	// Apply padding
-	m_chunk.at(index++) = PADDING_BYTE;
-	if ((index + 8) > CHUNK32_SIZE) {
-		/*
-		If there isn't enough space for the message length
-		then fill the rest of the chunk with zeroes, handle
-		the chunk and continue.
-		*/
-		while (index < CHUNK32_SIZE)
-			m_chunk.at(index++) = 0x00;
-		handle();
-		index = 0;
-	}
-
-	// Pad with zeroes
-	while ((index + sizeof(length)) < CHUNK32_SIZE)
-		m_chunk.at(index++) = 0x00;
-
-	// Append message length
-	for (int i = 56; i >= 0; i-=8) {
-		m_chunk.at(index++) = (length >> i) & 0xff;
-	}
-
-	// Handle the chunk
-	handle();
-}
-
-void SHA2_32::handle()
-{
-	std::array<u32, K32_SIZE> words{{}};
-
-	// Copy chunk into the 16 first words
-	for (u64 j = 0; j < CHUNK32_SIZE / 4; j++) {
-		words.at(j) = u8_to_u32(
-			m_chunk.at((j * 4)),
-			m_chunk.at((j * 4) + 1),
-			m_chunk.at((j * 4) + 2),
-			m_chunk.at((j * 4) + 3)
-		);
-	}
-
-	// Extend the first 16 words to the remaining 48
-	for (u64 j = CHUNK32_SIZE / 4; j < K32_SIZE; j++) {
-		u32 s0 = rightrotate_u32(words.at(j - 15), 7) ^ rightrotate_u32(words.at(j - 15), 18) ^ (words.at(j - 15) >> 3);
-		u32 s1 = rightrotate_u32(words.at(j - 2), 17) ^ rightrotate_u32(words.at(j - 2), 19) ^ (words.at(j - 2) >> 10);
-		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
-	}
-
-	u32 a = m_h.at(0);
-	u32 b = m_h.at(1);
-	u32 c = m_h.at(2);
-	u32 d = m_h.at(3);
-	u32 e = m_h.at(4);
-	u32 f = m_h.at(5);
-	u32 g = m_h.at(6);
-	u32 h = m_h.at(7);
-
-	// Main compression loop
-	for (int j = 0; j < K32_SIZE; j++) {
-		u32 s1 = rightrotate_u32(e, 6) ^ rightrotate_u32(e, 11) ^ rightrotate_u32(e, 25);
-		u32 ch = (e & f) ^ (~e & g);
-		u32 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
-		u32 s0 = rightrotate_u32(a, 2) ^ rightrotate_u32(a, 13) ^ rightrotate_u32(a, 22);
-		u32 maj = (a & b) ^ (a & c) ^ (b & c);
-		u32 temp2 = s0 + maj;
-
-		h = g;
-		g = f;
-		f = e;
-		e = d + temp1;
-		d = c;
-		c = b;
-		b = a;
-		a = temp1 + temp2;
-
-	}
-
-	// Add the compressed chunk to the current hash value
-	m_h.at(0) += a;
-	m_h.at(1) += b;
-	m_h.at(2) += c;
-	m_h.at(3) += d;
-	m_h.at(4) += e;
-	m_h.at(5) += f;
-	m_h.at(6) += g;
-	m_h.at(7) += h;
-}
-
-auto SHA2_32::output() const -> str
-{
-	str result = "";
-
-	try{
-		for (int i = 0; i < (m_type / 32); i++) {
-			result += u32_to_hex(m_h.at(i));
-		}
-	} catch (std::exception const& ex) {
-		std::cout << ex.what() << std::endl;
-	}
-
-	return result;
-}
-
-// A class for the "64-bit" version of SHA2
-class SHA2_64 {
-public:
-	explicit SHA2_64(int type, int subtype);
-	void load_string(const str &input);
-	void load_file(const str &filename);
-	auto output() const -> str;
-
-private:
-	std::array<u64, H_SIZE> m_h{ {} };
-	std::array<u64, K64_SIZE> m_k = K64;
-	std::array<u8, CHUNK64_SIZE> m_chunk{ {} };
-	int m_type;
-	int m_subtype;
-
-	void handle();
-};
-
-SHA2_64::SHA2_64(int type, int subtype)
-{
-	switch(type) {
-		case 384:
-			m_h = H_SHA384;
-			break;
-		case 512:
-			switch(subtype) {
+template<class T>
+SHA2<T>::SHA2(unsigned int type, unsigned int subtype) : m_type(type), m_subtype(subtype) {
+	if constexpr (std::is_same<T, u64>::value) {
+		// 64-bit
+		if (type == 512) {
+			switch (subtype) {
 				case 0:
 					m_h = H_SHA512;
 					break;
@@ -378,175 +153,186 @@ SHA2_64::SHA2_64(int type, int subtype)
 				case 256:
 					m_h = H_SHA512_256;
 					break;
+				case 512:
+					m_h = H_SHA512;
+					break;
 				default:
-					throw std::invalid_argument("The SHA2 subtype supplied is invalid or not implemented");
+					throw TC::exceptions::NotImplementedError("The subtype for SHA512 is not implemented!");
 			}
-			break;
-		default:
-			throw std::invalid_argument("The SHA2 type supplied is invalid or not implemented");
-			break;
+		} else if (type == 384) {
+			m_h = H_SHA384;
+		} else {
+			throw TC::exceptions::NotImplementedError("The (64-bit) SHA2 type is not implemented!");
+		}
+	} else if constexpr (std::is_same<T, u32>::value) {
+		// 32-bit
+		switch (type) {
+			case 224:
+				m_h = H_SHA224;
+				break;
+			case 256:
+				m_h = H_SHA256;
+				break;
+			default:
+				throw TC::exceptions::NotImplementedError("The (32-bit) SHA2 type is not implemented!");
+		}
+	} else {
+		throw TC::exceptions::TCException("The template type for SHA2 is invalid!");
 	}
-
-	m_type = type;
-	m_subtype = subtype;
 }
 
-void SHA2_64::load_file(const str &filename)
-{
-	size_t offset = 0;
-	size_t filelen = 0;
-	size_t index = 0;
-	u64 length = 0;
+// For debugging purposes
+template<class T>
+void SHA2<T>::print_block() const {
+	unsigned int i;
+	unsigned int perline = 4;
 
-	// Open file
-	char* buffer = new char[CHUNK64_SIZE] {};
-	std::ifstream infile(filename, std::ifstream::binary);
-	if (!infile.good())
-		throw "Could not open file!";
-
-	// Get infile length
-	infile.seekg (0, infile.end);
-    filelen = infile.tellg();
-	length = filelen * 8;
-    infile.seekg (0, infile.beg);
-
-	// Handle each chunk of the input
-	while ((filelen - offset) >= CHUNK64_SIZE) {
-		infile.read(buffer, CHUNK64_SIZE);
-		for (int i = 0; i < CHUNK64_SIZE; i++)
-			m_chunk.at(i) = buffer[i];
-
-		handle();
-		offset += CHUNK64_SIZE;
+	if constexpr (std::is_same<T, u64>::value) {
+		perline = 2;
 	}
 
-	// Load the rest of the input into buffer
-	index = filelen % CHUNK64_SIZE;
-	infile.read(buffer, index);
-	for (int i = 0; i < index; i++)
-		m_chunk.at(i) = buffer[i];
+	for (i = 0; i < BLOCK_SIZE; i++) {
+		std::cout << to_hex<T>(m_block.at(i)) << " ";
+		if ((i + 1) % perline == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << "- ";
+		}
+	}
+	std::cout << std::endl;
+}
 
-	infile.close();
+template<class T>
+auto SHA2<T>::hexdigest(std::istream* const input) -> std::string* const {
+	load(input);
+
+	static std::string result = "";
+	unsigned int i;
+
+	for (i = 0; i < (m_type / T_BITS); i++) {
+		result += to_hex<T>(m_h.at(i));
+	}
+
+	return &result;
+}
+
+template<class T>
+void SHA2<T>::load(std::istream* const input) {
+	u64 length = 0;
+	size_t read = 0;
+	unsigned int i;
+	char* buffer = new char[BLOCK_BYTES] {};
+
+	// Read the entire file
+	while (input->peek() != EOF) {
+		read = input->readsome(buffer, BLOCK_BYTES);
+		length += read * 8;
+
+		// Read in whole parts
+		for (i = 0; i < (read / T_BYTES); i++) {
+			m_block.at(i) = load_be<T>(buffer, BLOCK_BYTES, i * T_BYTES);
+		}
+
+		// Read in the rest
+		if ((read % T_BYTES) > 0) {
+			m_block.at(i) = load_be<T>(buffer, BLOCK_BYTES, i * T_BYTES, read % T_BYTES);
+		}
+
+		if (read == BLOCK_BYTES) {
+			comp();
+			read = 0;
+		}
+	}
+
 	delete[] buffer;
 
 	// Apply padding
-	m_chunk.at(index++) = PADDING_BYTE;
-	if ((index + 8) > CHUNK64_SIZE) {
-		/*
-		If there isn't enough space for the message length
-		then fill the rest of the chunk with zeroes, handle
-		the chunk and continue.
-		*/
-		while (index < CHUNK64_SIZE)
-			m_chunk.at(index++) = 0x00;
-		handle();
-		index = 0;
-	}
+	m_block.at(read / T_BYTES) ^= xor_mask_be<T>(0x80, read % T_BYTES);
 
-	// Pad with zeroes
-	while ((index + 8) < CHUNK64_SIZE)
-		m_chunk.at(index++) = 0x00;
+	// In case the message length does not fit
+	if (read + (T_BYTES * 2) >= BLOCK_BYTES) {
+		comp();
+	}
 
 	// Append message length
-	for (int i = 56; i >= 0; i-=8)
-		m_chunk.at(index++) = (length >> i) & 0xff;
+	if constexpr(std::is_same<T, u64>::value) {
+		// 64-bit
+		m_block.at(BLOCK_SIZE - 1) = length;
+	} else if constexpr(std::is_same<T, u32>::value) {
+		// 32-bit
+		m_block.at(BLOCK_SIZE - 2) = (length >> 32) & U32MAX;
+		m_block.at(BLOCK_SIZE - 1) = length & U32MAX;
+	} else {
+		throw TC::exceptions::TCException("The template type for SHA2 is invalid!");
+	}
 
-	// Handle the chunk
-	handle();
+	comp();
 }
 
-void SHA2_64::load_string(const str &input)
-{
-	// Initialize message length
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index;
+template<class T>
+void SHA2<T>::comp() {
+	// For debugging
+	//print_block();
 
-	// Handle each chunk of the input
-	while (input.length() - offset >= CHUNK64_SIZE) {
-		for (int i = 0; i < CHUNK64_SIZE; i++)
-			m_chunk.at(i) = input[i + offset];
-
-		handle();
-		offset += CHUNK64_SIZE;
-	}
-
-	// Load the rest of the input into chunk
-	index = 0;
-	for (int i = 0; i < (input.length() - offset); i++) {
-		m_chunk.at(i) = input[i + offset];
-		index++;
-	}
-
-	// Apply padding
-	m_chunk.at(index++) = PADDING_BYTE;
-	if ((index + 8) > CHUNK64_SIZE) {
-		/*
-		If there isn't enough space for the message length
-		then fill the rest of the chunk with zeroes, handle
-		the chunk and continue.
-		*/
-		while (index < CHUNK64_SIZE)
-			m_chunk.at(index++) = 0x00;
-		handle();
-		index = 0;
-	}
-
-	// Pad with zeroes
-	while ((index + 8) < CHUNK64_SIZE)
-		m_chunk.at(index++) = 0x00;
-
-	// Append message length
-	for (int i = 56; i >= 0; i-=8)
-		m_chunk.at(index++) = (length >> i) & 0xff;
-
-	// Handle the chunk
-	handle();
-}
-
-void SHA2_64::handle()
-{
-	//_print_chunk();
-	std::array<u64, K64_SIZE> words{{}};
+	std::array<T, K_SIZE> words = {};
+	size_t j;
 
 	// Copy chunk into the 16 first words
-	for (int j = 0; j < 16; j++) {
-		words.at(j) = u8_to_u64(
-			m_chunk.at((j * 8)),
-			m_chunk.at((j * 8) + 1),
-			m_chunk.at((j * 8) + 2),
-			m_chunk.at((j * 8) + 3),
-			m_chunk.at((j * 8) + 4),
-			m_chunk.at((j * 8) + 5),
-			m_chunk.at((j * 8) + 6),
-			m_chunk.at((j * 8) + 7)
-		);
+	for (j = 0; j < BLOCK_SIZE; j++) {
+		words.at(j) = m_block.at(j);
 	}
 
-	// Extend the first 16 words to 80
-	for (int j = 16; j < K64_SIZE; j++) {
-		u64 s0 = rightrotate_u64(words.at(j - 15), 1) ^ rightrotate_u64(words.at(j - 15), 8) ^ (words.at(j - 15) >> 7);
-		u64 s1 = rightrotate_u64(words.at(j - 2), 19) ^ rightrotate_u64(words.at(j - 2), 61) ^ (words.at(j - 2) >> 6);
+	// Clear m_chunk
+	m_block.fill(0);
+
+	// Extend the first 16 words to the remaining 48
+	for (j = BLOCK_SIZE; j < K_SIZE; j++) {
+		T s0, s1;
+		if constexpr(std::is_same<T, u64>::value) {
+			// 64-bit
+			s0 = rotateright<T>(words.at(j - 15), 1) ^ rotateright<T>(words.at(j - 15), 8) ^ (words.at(j - 15) >> 7);
+			s1 = rotateright<T>(words.at(j - 2), 19) ^ rotateright<T>(words.at(j - 2), 61) ^ (words.at(j - 2) >> 6);
+		} else if constexpr(std::is_same<T, u32>::value) {
+			// 32-bit
+			s0 = rotateright<T>(words.at(j - 15), 7) ^ rotateright<T>(words.at(j - 15), 18) ^ (words.at(j - 15) >> 3);
+			s1 = rotateright<T>(words.at(j - 2), 17) ^ rotateright<T>(words.at(j - 2), 19) ^ (words.at(j - 2) >> 10);
+		} else {
+			throw TC::exceptions::TCException("The template type for SHA2 is invalid!");
+		}
 		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
 	}
 
-	u64 a = m_h.at(0);
-	u64 b = m_h.at(1);
-	u64 c = m_h.at(2);
-	u64 d = m_h.at(3);
-	u64 e = m_h.at(4);
-	u64 f = m_h.at(5);
-	u64 g = m_h.at(6);
-	u64 h = m_h.at(7);
+	T a = m_h.at(0);
+	T b = m_h.at(1);
+	T c = m_h.at(2);
+	T d = m_h.at(3);
+	T e = m_h.at(4);
+	T f = m_h.at(5);
+	T g = m_h.at(6);
+	T h = m_h.at(7);
 
 	// Main compression loop
-	for (int j = 0; j < K64_SIZE; j++) {
-		u64 s1 = rightrotate_u64(e, 14) ^ rightrotate_u64(e, 18) ^ rightrotate_u64(e, 41);
-		u64 ch = (e & f) ^ (~e & g);
-		u64 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
-		u64 s0 = rightrotate_u64(a, 28) ^ rightrotate_u64(a, 34) ^ rightrotate_u64(a, 39);
-		u64 maj = (a & b) ^ (a & c) ^ (b & c);
-		u64 temp2 = s0 + maj;
+	for (j = 0; j < K_SIZE; j++) {
+		T temp1, temp2;
+		if constexpr(std::is_same<T, u64>::value) {
+			// 64-bit
+			T s0 = rotateright<T>(a, 28) ^ rotateright<T>(a, 34) ^ rotateright<T>(a, 39);
+			T s1 = rotateright<T>(e, 14) ^ rotateright<T>(e, 18) ^ rotateright<T>(e, 41);
+			T ch = (e & f) ^ (~e & g);
+			temp1 = h + s1 + ch + K64.at(j) + words.at(j);
+			T maj = (a & b) ^ (a & c) ^ (b & c);
+			temp2 = s0 + maj;
+		} else if constexpr(std::is_same<T, u32>::value) {
+			// 32-bit
+			T s0 = rotateright<T>(a, 2) ^ rotateright<T>(a, 13) ^ rotateright<T>(a, 22);
+			T s1 = rotateright<T>(e, 6) ^ rotateright<T>(e, 11) ^ rotateright<T>(e, 25);
+			T ch = (e & f) ^ (~e & g);
+			temp1 = h + s1 + ch + K32.at(j) + words.at(j);
+			T maj = (a & b) ^ (a & c) ^ (b & c);
+			temp2 = s0 + maj;
+		} else {
+			throw TC::exceptions::TCException("The template type for SHA2 is invalid!");
+		}
 
 		h = g;
 		g = f;
@@ -570,120 +356,404 @@ void SHA2_64::handle()
 	m_h.at(7) += h;
 }
 
-auto SHA2_64::output() const -> str
-{
-	str result = "";
-	int index;
+// A class for the "32-bit" version of SHA2
+//class SHA2_32 {
+//public:
+//	explicit SHA2_32(int type);
+//	void load(std::istream* infile);
+//	auto output() const -> str;
+//
+//private:
+//	std::array<u32, H_SIZE> m_h = {};
+//	std::array<u32, K32_SIZE> m_k = K32;
+//	std::array<u32, CHUNK_SIZE> m_chunk = {};
+//	int m_type;
+//
+//	void handle();
+//};
+//
+//SHA2_32::SHA2_32(int type)
+//{
+//	switch(type) {
+//		case 224:
+//			m_h = H_SHA224;
+//			break;
+//		case 256:
+//			m_h = H_SHA256;
+//			break;
+//		default:
+//			throw TC::exceptions::NotImplementedError("The SHA2 type supplied is not implemented.");
+//			break;
+//	}
+//
+//	m_type = type;
+//}
+//
+//void SHA2_32::load(std::istream* infile)
+//{
+//	u64 length = 0;
+//	int index = 0;
+//	char* buffer = new char[CHUNK32_BYTES] {};
+//
+//	// Read the entire file
+//	while (infile->peek() != EOF) {
+//		index = infile->readsome(buffer, CHUNK32_BYTES);
+//		length += index * 8;
+//
+//		// Read in whole dwords
+//		int i;
+//		for (i = 0; i < (index / 4); i++) {
+//			m_chunk.at(i) = load_be<u32>(buffer, CHUNK32_BYTES, i * 4);
+//		}
+//
+//		// Read in the rest
+//		if ((index % 4) > 0) {
+//			m_chunk.at(i) = load_be<u32>(buffer, CHUNK32_BYTES, i * 4, index % 4);
+//		}
+//
+//		if (index == CHUNK32_BYTES) {
+//			handle();
+//			index = 0;
+//		}
+//	}
+//
+//	delete[] buffer;
+//
+//	// Apply padding
+//	m_chunk.at(index / 4) ^= xor_mask_be<u32>(PADDING_BYTE, index % 4);
+//	index++;
+//
+//	// In case the message length does not fit
+//	if (index + 8 >= CHUNK32_BYTES) {
+//		handle();
+//	}
+//
+//	// Append message length
+//	m_chunk.at(CHUNK_SIZE - 2) = (length >> 32) & U32MAX;
+//	m_chunk.at(CHUNK_SIZE - 1) = length & U32MAX;
+//	handle();
+//}
+//
+//void SHA2_32::handle()
+//{
+//	std::array<u32, K32_SIZE> words = {};
+//
+//	// Copy chunk into the 16 first words
+//	for (u64 j = 0; j < CHUNK_SIZE; j++) {
+//		words.at(j) = m_chunk.at(j);
+//	}
+//
+//	// Clear m_chunk
+//	m_chunk.fill(0);
+//
+//	// Extend the first 16 words to the remaining 48
+//	for (u64 j = CHUNK_SIZE; j < K32_SIZE; j++) {
+//		u32 s0 = rotateright<u32>(words.at(j - 15), 7) ^ rotateright<u32>(words.at(j - 15), 18) ^ (words.at(j - 15) >> 3);
+//		u32 s1 = rotateright<u32>(words.at(j - 2), 17) ^ rotateright<u32>(words.at(j - 2), 19) ^ (words.at(j - 2) >> 10);
+//		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
+//	}
+//
+//	u32 a = m_h.at(0);
+//	u32 b = m_h.at(1);
+//	u32 c = m_h.at(2);
+//	u32 d = m_h.at(3);
+//	u32 e = m_h.at(4);
+//	u32 f = m_h.at(5);
+//	u32 g = m_h.at(6);
+//	u32 h = m_h.at(7);
+//
+//	// Main compression loop
+//	for (int j = 0; j < K32_SIZE; j++) {
+//		u32 s1 = rotateright<u32>(e, 6) ^ rotateright<u32>(e, 11) ^ rotateright<u32>(e, 25);
+//		u32 ch = (e & f) ^ (~e & g);
+//		u32 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
+//		u32 s0 = rotateright<u32>(a, 2) ^ rotateright<u32>(a, 13) ^ rotateright<u32>(a, 22);
+//		u32 maj = (a & b) ^ (a & c) ^ (b & c);
+//		u32 temp2 = s0 + maj;
+//
+//		h = g;
+//		g = f;
+//		f = e;
+//		e = d + temp1;
+//		d = c;
+//		c = b;
+//		b = a;
+//		a = temp1 + temp2;
+//
+//	}
+//
+//	// Add the compressed chunk to the current hash value
+//	m_h.at(0) += a;
+//	m_h.at(1) += b;
+//	m_h.at(2) += c;
+//	m_h.at(3) += d;
+//	m_h.at(4) += e;
+//	m_h.at(5) += f;
+//	m_h.at(6) += g;
+//	m_h.at(7) += h;
+//}
+//
+//auto SHA2_32::output() const -> str
+//{
+//	str result = "";
+//
+//	for (int i = 0; i < (m_type / 32); i++) {
+//		result += to_hex<u32>(m_h.at(i));
+//	}
+//
+//	return result;
+//}
+//
+//// A class for the "64-bit" version of SHA2
+//class SHA2_64 {
+//public:
+//	explicit SHA2_64(int type, int subtype);
+//	void load(std::istream* infile);
+//	auto output() const -> str;
+//
+//private:
+//	std::array<u64, H_SIZE> m_h{ {} };
+//	std::array<u64, K64_SIZE> m_k = K64;
+//	std::array<u64, CHUNK_SIZE> m_chunk{ {} };
+//	int m_type;
+//	int m_subtype;
+//
+//	void handle();
+//
+//	// For debugging
+//	void print_chunk() const;
+//	void print_h() const;
+//};
+//
+//SHA2_64::SHA2_64(int type, int subtype)
+//{
+//	switch(type) {
+//		case 384:
+//			m_h = H_SHA384;
+//			break;
+//		case 512:
+//			switch(subtype) {
+//				case 0:
+//					m_h = H_SHA512;
+//					break;
+//				case 224:
+//					m_h = H_SHA512_224;
+//					break;
+//				case 256:
+//					m_h = H_SHA512_256;
+//					break;
+//				default:
+//					throw TC::exceptions::NotImplementedError("The SHA2 subtype supplied is not implemented");
+//			}
+//			break;
+//		default:
+//			throw TC::exceptions::NotImplementedError("The SHA2 type supplied is invalid or not implemented");
+//			break;
+//	}
+//
+//	m_type = type;
+//	m_subtype = subtype;
+//}
+//
+//// For debugging
+//void SHA2_64::print_chunk() const {
+//	std::cout << "-- C --" << std::endl;
+//	for (int i = 0; i < m_chunk.size(); i++) {
+//		std::cout << to_hex<u64>(m_chunk[i]) << " ";
+//		if ((i + 1) % 2 == 0) {
+//			std::cout << std::endl;
+//		} else {
+//			std::cout << "- ";
+//		}
+//	}
+//	std::cout << "-------" << std::endl << std::endl;
+//}
+//
+//// For debugging
+//void SHA2_64::print_h() const {
+//	std::cout << "-- H --" << std::endl;
+//	for (int i = 0; i < m_h.size(); i++) {
+//		std::cout << to_hex<u64>(m_h[i]) << " ";
+//		if ((i + 1) % 2 == 0) {
+//			std::cout << std::endl;
+//		} else {
+//			std::cout << "- ";
+//		}
+//	}
+//	std::cout << "-------" << std::endl << std::endl;
+//}
+//
+//void SHA2_64::load(std::istream* infile) {
+//	u64 length = 0;
+//	int index = 0;
+//	char* buffer = new char[CHUNK64_BYTES];
+//
+//	// Read the entire file
+//	while (infile->peek() != EOF) {
+//		index = infile->readsome(buffer, CHUNK64_BYTES);
+//		length += index * 8;
+//
+//		// Read in whole 64-bit qwords
+//		int i;
+//		for (i = 0; i < (index / 8); i++) {
+//			m_chunk.at(i) = load_be<u64>(buffer, CHUNK64_BYTES, i * 8);
+//		}
+//
+//		// Read in the rest
+//		if ((index % 8) > 0) {
+//			m_chunk.at(i) = load_be<u64>(buffer, CHUNK64_BYTES, i * 8, index % 8);
+//		}
+//
+//		if (index == CHUNK64_BYTES) {
+//			handle();
+//			index = 0;
+//		}
+//	}
+//
+//	delete[] buffer;
+//
+//	// Apply padding
+//	m_chunk.at(index / 8) ^= xor_mask_be<u64>(PADDING_BYTE, index % 8);
+//	index++;
+//
+//	// In case the message length does not fit
+//	if (index + 8 >= CHUNK64_BYTES) {
+//		handle();
+//	}
+//
+//	// Append message length
+//	m_chunk.at(CHUNK_SIZE - 1) = length;
+//	handle();
+//}
+//
+//void SHA2_64::handle()
+//{
+//	//print_chunk();
+//	std::array<u64, K64_SIZE> words = {};
+//
+//	// Copy chunk into the 16 first words
+//	for (int j = 0; j < CHUNK_SIZE; j++) {
+//		words.at(j) = m_chunk.at(j);
+//	}
+//
+//	// Clear m_chunk
+//	m_chunk.fill(0);
+//
+//	// Extend the first 16 words to 80
+//	for (int j = 16; j < K64_SIZE; j++) {
+//		u64 s0 = rotateright<u64>(words.at(j - 15), 1) ^ rotateright<u64>(words.at(j - 15), 8) ^ (words.at(j - 15) >> 7);
+//		u64 s1 = rotateright<u64>(words.at(j - 2), 19) ^ rotateright<u64>(words.at(j - 2), 61) ^ (words.at(j - 2) >> 6);
+//		words.at(j) = words.at(j - 16) + s0 + words.at(j - 7) + s1;
+//	}
+//
+//	u64 a = m_h.at(0);
+//	u64 b = m_h.at(1);
+//	u64 c = m_h.at(2);
+//	u64 d = m_h.at(3);
+//	u64 e = m_h.at(4);
+//	u64 f = m_h.at(5);
+//	u64 g = m_h.at(6);
+//	u64 h = m_h.at(7);
+//
+//	// Main compression loop
+//	for (int j = 0; j < K64_SIZE; j++) {
+//		u64 s1 = rotateright<u64>(e, 14) ^ rotateright<u64>(e, 18) ^ rotateright<u64>(e, 41);
+//		u64 ch = (e & f) ^ (~e & g);
+//		u64 temp1 = h + s1 + ch + m_k.at(j) + words.at(j);
+//		u64 s0 = rotateright<u64>(a, 28) ^ rotateright<u64>(a, 34) ^ rotateright<u64>(a, 39);
+//		u64 maj = (a & b) ^ (a & c) ^ (b & c);
+//		u64 temp2 = s0 + maj;
+//
+//		h = g;
+//		g = f;
+//		f = e;
+//		e = d + temp1;
+//		d = c;
+//		c = b;
+//		b = a;
+//		a = temp1 + temp2;
+//
+//	}
+//
+//	// Add the compressed chunk to the current hash value
+//	m_h.at(0) += a;
+//	m_h.at(1) += b;
+//	m_h.at(2) += c;
+//	m_h.at(3) += d;
+//	m_h.at(4) += e;
+//	m_h.at(5) += f;
+//	m_h.at(6) += g;
+//	m_h.at(7) += h;
+//}
+//
+//auto SHA2_64::output() const -> str
+//{
+//	str result = "";
+//	unsigned int length = m_subtype;
+//	unsigned int i;
+//
+//	if (length == 0)
+//		length = m_type;
+//
+//	// Whole qwords
+//	for (i = 0; i < (length / 64); i++) {
+//		result += to_hex<u64>(m_h.at(i));
+//	}
+//
+//	// The rest
+//	if ((length % 64) > 0) {
+//		for (i = 0; i < (length % 64); i++) {
+//			result += to_hex<u8>((m_h.at(i) >> (i * 8)) & 0xff);
+//		}
+//	}
+//
+//	return result;
+//}
 
-	try {
-		if (m_type == 512 && m_subtype != 0) {
-			for (int i = 0; i < (m_subtype / 32); i++) {
-				if (i % 2 == 0) {
-					index = i / 2;
-					result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
-				} else {
-					result += u32_to_hex(m_h.at(index) & 0xffffffff);
-				}
-			}
-		} else {
-			for (int i = 0; i < (m_type / 32); i++) {
-				if (i % 2 == 0) {
-					index = i / 2;
-					result += u32_to_hex((m_h.at(index) & 0xffffffff00000000) >> 32);
-				} else {
-					result += u32_to_hex(m_h.at(index) & 0xffffffff);
-				}
-			}
-		}
-	} catch (std::exception const& ex) {
-		std::cout << ex.what() << std::endl;
-	}
-
-	return result;
+auto TC::SHA::sha224(std::istream* input) -> std::string* const {
+	SHA2<u32> inst(224);
+	return inst.hexdigest(input);
 }
 
-namespace SHA {
-	auto sha224(const str &input) -> str
-	{
-		SHA2_32 inst(224);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha224_file(const str &filename) -> str
-	{
-		SHA2_32 inst(224);
-		inst.load_file(filename);
-		return inst.output();
-	}
-
-	auto sha256(const str &input) -> str
-	{
-		SHA2_32 inst(256);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha256_file(const str &filename) -> str
-	{
-		SHA2_32 inst(256);
-		inst.load_file(filename);
-		return inst.output();
-	}
-
-	auto sha384(const str &input) -> str
-	{
-		SHA2_64 inst(384, 0);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha384_file(const str &filename) -> str
-	{
-		SHA2_64 inst(384, 0);
-		inst.load_file(filename);
-		return inst.output();
-	}
-
-	auto sha512(const str &input) -> str
-	{
-		SHA2_64 inst(512, 0);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha512_file(const str &filename) -> str
-	{
-		SHA2_64 inst(512, 0);
-		inst.load_file(filename);
-		return inst.output();
-	}
-
-	auto sha512_224(const str &input) -> str
-	{
-		SHA2_64 inst(512, 224);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha512_224_file(const str &filename) -> str
-	{
-		SHA2_64 inst(512, 224);
-		inst.load_file(filename);
-		return inst.output();
-	}
-
-	auto sha512_256(const str &input) -> str
-	{
-		SHA2_64 inst(512, 256);
-		inst.load_string(input);
-		return inst.output();
-	}
-
-	auto sha512_256_file(const str &filename) -> str
-	{
-		SHA2_64 inst(512, 256);
-		inst.load_file(filename);
-		return inst.output();
-	}
+auto TC::SHA::sha256(std::istream* input) -> std::string* const {
+	SHA2<u32> inst(256);
+	return inst.hexdigest(input);
 }
+
+auto TC::SHA::sha384(std::istream* input) -> std::string* const {
+	SHA2<u64> inst(384);
+	return inst.hexdigest(input);
+}
+
+auto TC::SHA::sha512(std::istream* input, unsigned int subtype) -> std::string* const {
+	SHA2<u64> inst(512, subtype);
+	return inst.hexdigest(input);
+}
+
+//auto TC::SHA::sha224(std::istream* input) -> str
+//{
+//	SHA2_32 inst(224);
+//	inst.load(input);
+//	return inst.output();
+//}
+//
+//auto TC::SHA::sha256(std::istream* input) -> str
+//{
+//	SHA2_32 inst(256);
+//	inst.load(input);
+//	return inst.output();
+//}
+//
+//auto TC::SHA::sha384(std::istream* input) -> str
+//{
+//	SHA2_64 inst(384, 0);
+//	inst.load(input);
+//	return inst.output();
+//}
+//
+//auto TC::SHA::sha512(std::istream* input, int subtype) -> str
+//{
+//	SHA2_64 inst(512, subtype);
+//	inst.load(input);
+//	return inst.output();
+//}

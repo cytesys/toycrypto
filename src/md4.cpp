@@ -2,38 +2,23 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+
 #include "common.hpp"
+#include "toycrypto.hpp"
 
+#define CHUNK_SIZE 64
+#define PADDING_BYTE 0x80
 
-static u32 F(u32 x, u32 y, u32 z) {
-	return ((x & y) | ((~x) & z));
-}
-
-static u32 G(u32 x, u32 y, u32 z) {
-	return ((x & y) | (x & z) | (y & z));
-}
-
-static u32 H(u32 x, u32 y, u32 z) {
-	return (x ^ y ^ z);
-}
-
-static u32 FF(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate_u32(a + F(b, c, d) + x, s);
-}
-
-static u32 GG(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate_u32(a + G(b, c, d) + x + (u32)0x5a827999, s);
-}
-
-static u32 HH(u32 a, u32 b, u32 c, u32 d, u32 x, unsigned int s) {
-	return leftrotate_u32(a + H(b, c, d) + x + (u32)0x6ed9eba1, s);
-}
+#define F(x, y, z) (((x) & (y)) | ((~(x)) & (z)))
+#define G(x, y, z) (((x) & (y)) | ((x) & (z)) | ((y) & (z)))
+#define H(x, y, z) ((x) ^ (y) ^ (z))
+#define FF(a, b, c, d, x, s) (rotateleft<u32>((a) + F((b), (c), (d)) + (x), (s)))
+#define GG(a, b, c, d, x, s) (rotateleft<u32>((a) + G((b), (c), (d)) + (x) + (u32)0x5a827999, (s)))
+#define HH(a, b, c, d, x, s) (rotateleft<u32>((a) + H((b), (c), (d)) + (x) + (u32)0x6ed9eba1, (s)))
 
 class MD4 {
 public:
-	void load_string(const str& input);
-	void load_file(const str& filename);
-	auto output() const -> str;
+	auto hexdigest(std::istream* const input)->std::string* const;
 
 private:
 	std::array<u32, 16> m_x{ {} };
@@ -42,226 +27,92 @@ private:
 	u32 m_c = 0x98badcfe;
 	u32 m_d = 0x10325476;
 
+	void load(std::istream* const input);
 	void handle();
+
+	// For debugging purposes
+	void print_x() const;
 };
 
-void MD4::load_string(const str& input)
-{
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index = 0;
-
-	while (input.length() - offset >= 64) {
-		// Load bytes from input into the chunk buffer
-		// and store data in 32-bit words
-		for (int i = 0; i < 16; i++) {
-			m_x.at(i) = u8_to_u32(
-				input[(i * 4) + offset + 3],
-				input[(i * 4) + offset + 2],
-				input[(i * 4) + offset + 1],
-				input[(i * 4) + offset]
-			);
+// For debugging purposes
+void MD4::print_x() const {
+	unsigned int i;
+	for (i = 0; i < m_x.size(); i++) {
+		std::cout << to_hex<u32>(m_x.at(i)) << " ";
+		if ((i + 1) % 4 == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << "- ";
 		}
-
-		// Handle
-		handle();
-
-		// Increase offset
-		offset += 64;
 	}
-
-	// Load the remaining whole 32-bit words from input
-	if ((input.length() - offset) >= 4) {
-		int rem_whole = std::floor((input.length() - offset) / 4);
-		size_t new_offset = offset;
-
-		for (int i = 0; i < (rem_whole * 4); i += 4) {
-			m_x.at(index++) = u8_to_u32(
-				input[i + offset + 3],
-				input[i + offset + 2],
-				input[i + offset + 1],
-				input[i + offset]
-			);
-
-			new_offset += 4;
-		}
-
-		offset = new_offset;
-	}
-
-	// Load the remaining bytes from input
-	switch ((input.length() - offset)) {
-	case 0:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x00,
-			0x80
-		);
-		break;
-	case 1:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x80,
-			input[offset]
-		);
-		break;
-	case 2:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x80,
-			input[offset + 1],
-			input[offset]
-		);
-		break;
-	case 3:
-		m_x.at(index++) = u8_to_u32(
-			0x80,
-			input[offset + 2],
-			input[offset + 1],
-			input[offset]
-		);
-		break;
-	default:
-		break;
-	}
-
-	if (index + 2 > 16) {
-		while (index < 16) {
-			m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
-		}
-
-		handle();
-		index = 0;
-	}
-
-	// Pad with zeroes
-	while (index + 2 < 16) {
-		m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
-	}
-
-	// Append the message length
-	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
-
-	handle();
+	std::cout << std::endl;
 }
 
-void MD4::load_file(const str &filename)
-{
-	size_t offset = 0;
+auto MD4::hexdigest(std::istream* const input) -> std::string* const {
+	load(input);
+
+	static std::string result = "";
+	result += to_hex<u32>(m_a, true);
+	result += to_hex<u32>(m_b, true);
+	result += to_hex<u32>(m_c, true);
+	result += to_hex<u32>(m_d, true);
+	return &result;
+}
+
+void MD4::load(std::istream* const input) {
 	u64 length = 0;
-	size_t filelen = 0;
-	size_t index = 0;
-	size_t buffer_index = 0;
+	size_t read = 0;
+	unsigned int i;
+	char* buffer = new char[CHUNK_SIZE];
 
-	// Opem the file
-	char* buffer = new char[64];
-	std::ifstream infile(filename, std::ifstream::binary);
-	if (!infile.good())
-		throw "Could not open file!";
-
-	// Get file length
-	infile.seekg(0, infile.end);
-	filelen = infile.tellg();
-	length = filelen * 8;
-	infile.seekg(0, infile.beg);
-
-	while ((filelen - offset) >= 64) {
-		// Load 16 bytes into the chunk
-		infile.read(buffer, 64);
-		for (int i = 0; i < 16; i++) {
-			m_x.at(i) = u8_to_u32(
-				buffer[(i * 4) + 3],
-				buffer[(i * 4) + 2],
-				buffer[(i * 4) + 1],
-				buffer[(i * 4)]
-			);
+	// Read in the data in chunks
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("Could not read data!");
 		}
 
-		handle();
-		offset += 64;
-	}
+		read = input->readsome(buffer, CHUNK_SIZE);
+		length += read * 8;
 
-	// Load the remaining whole 32-bit words from input
-	if ((filelen - offset) > 0) {
-		infile.read(buffer, (filelen - offset));
+		// Read in whole 32-bit words
+		for (i = 0; i < (read / 4); i++) {
+			//std::cout << "Loading in whole: i = " << i << ", read = " << read << std::endl;
+			m_x.at(i) = load_le<u32>(buffer, CHUNK_SIZE, i * 4);
+		}
 
-		if ((filelen - offset) >= 4) {
-			int rem_whole = std::floor((filelen - offset) / 4);
-			size_t new_offset = offset;
+		// Read in the rest
+		if ((read % 4) > 0) {
+			//std::cout << "Loading in the rest: i = " << i << ", rest = " << read % 4 << std::endl;
+			m_x.at(i) = load_le<u32>(buffer, CHUNK_SIZE, i * 4, read % 4);
+		}
 
-			for (int i = 0; i < (rem_whole * 4); i += 4) {
-				m_x.at(index++) = u8_to_u32(
-					buffer[i + 3],
-					buffer[i + 2],
-					buffer[i + 1],
-					buffer[i]
-				);
-
-				new_offset += 4;
-				buffer_index += 4;
-			}
-			offset = new_offset;
+		if (read == CHUNK_SIZE) {
+			handle();
+			read = 0;
 		}
 	}
 
-	infile.close();
-
-	switch ((filelen - offset)) {
-	case 0:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x00,
-			0x80
-		);
-		break;
-	case 1:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x00,
-			0x80,
-			buffer[buffer_index]
-		);
-		break;
-	case 2:
-		m_x.at(index++) = u8_to_u32(
-			0x00,
-			0x80,
-			buffer[buffer_index + 1],
-			buffer[buffer_index]
-		);
-		break;
-	case 3:
-		m_x.at(index++) = u8_to_u32(
-			0x80,
-			buffer[buffer_index + 2],
-			buffer[buffer_index + 1],
-			buffer[buffer_index]
-		);
-		break;
-	default:
-		break;
-	}
-	
 	delete[] buffer;
 
-	// Pad with zeroes
-	while (index + 2 < 16)
-		m_x.at(index++) = u8_to_u32(0x00, 0x00, 0x00, 0x00);
+	// Add the padding byte
+	m_x.at(read / 4) ^= (u32)(PADDING_BYTE) << ((read % 4) * 8);
+	read++;
+
+	// Make a new block if the length don't fit
+	if (read + 8 >= CHUNK_SIZE) {
+		handle();
+	}
 
 	// Append the message length
-	m_x.at(index++) = length & 0xffffffff;
-	m_x.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
+	m_x.at((CHUNK_SIZE / 4) - 2) = length & U32MAX;
+	m_x.at((CHUNK_SIZE / 4) - 1) = rotateleft<u64>(length, 32) & U32MAX;
 
 	handle();
 }
 
 void MD4::handle()
 {
-	//_debug();
+	//print_x();
 
 	u32 a = m_a;
 	u32 b = m_b;
@@ -326,34 +177,13 @@ void MD4::handle()
 	m_b += b;
 	m_c += c;
 	m_d += d;
+
+	// Clear m_x
+	m_x.fill(0);
 }
 
-auto MD4::output() const -> str
+auto TC::MD::md4(std::istream* const input) -> std::string* const
 {
-	str result = "";
-	try {
-		result += u32_to_hex(reverse_u32(m_a));
-		result += u32_to_hex(reverse_u32(m_b));
-		result += u32_to_hex(reverse_u32(m_c));
-		result += u32_to_hex(reverse_u32(m_d));
-	} catch (std::exception const& ex) {
-		std::cout << ex.what() << std::endl;
-	}
-	return result;
-}
-
-namespace MD {
-	auto md4(const str& input) -> str
-	{
-		MD4 instance = MD4();
-		instance.load_string(input);
-		return instance.output();
-	}
-
-	auto md4_file(const str& filename) -> str
-	{
-		MD4 instance = MD4();
-		instance.load_file(filename);
-		return instance.output();
-	}
+	MD4 inst = MD4();
+	return inst.hexdigest(input);
 }

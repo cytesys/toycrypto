@@ -1,23 +1,42 @@
 #include <array>
-#include "common.hpp"
+#include <iostream>
 
+#include "common.hpp"
+#include "toycrypto.hpp"
+
+
+#define T_BYTES sizeof(T)
+#define T_BITS (T_BYTES * 8)
+
+#define BLOCK_SIZE 16
+#define BLOCK_BYTES (BLOCK_SIZE * T_BYTES)
+
+#define BLOCK32_BYTES 64  // 16 * 4 bytes
+#define BLOCK64_BYTES 128 // 16 * 8 bytes
+
+#define SALT_SIZE 4
+#define SALT_BYTES (SALT_SIZE * T_BYTES)
+
+#define SALT32_BYTES 16 // 4 * 4 bytes
+#define SALT64_BYTES 32 // 4 * 8 bytes
 
 // Initial values
-constexpr std::array<u32, 8> IV24 = {
+#define H_SIZE 8
+constexpr std::array<u32, H_SIZE> IV24 = {
 	0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939,
 	0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
 };
-constexpr std::array<u32, 8> IV32 = {
+constexpr std::array<u32, H_SIZE> IV32 = {
 	0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
 	0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
 };
-constexpr std::array<u64, 8> IV64 = {
+constexpr std::array<u64, H_SIZE> IV64 = {
 	0x6a09e667f3bcc908, 0xbb67ae8584caa73b,
 	0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
 	0x510e527fade682d1, 0x9b05688c2b3e6c1f,
 	0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
-constexpr std::array<u64, 8> IV38 = {
+constexpr std::array<u64, H_SIZE> IV38 = {
 	0xcbbb9d5dc1059ed8, 0x629a292a367cd507,
 	0x9159015a3070dd17, 0x152fecd8f70e5939,
 	0x67332667ffc00b31, 0x8eb44a8768581511,
@@ -25,14 +44,15 @@ constexpr std::array<u64, 8> IV38 = {
 };
 
 // Constants
-constexpr std::array<u32, 16> C32 = {
+#define C_SIZE 16
+constexpr std::array<u32, C_SIZE> C32 = {
 	0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344,
 	0xa4093822, 0x299f31d0, 0x082efa98, 0xec4e6c89,
 	0x452821e6, 0x38d01377, 0xbe5466cf, 0x34e90c6c,
 	0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5, 0xb5470917
 };
 
-constexpr std::array<u64, 16> C64 = {
+constexpr std::array<u64, C_SIZE> C64 = {
 	0x243f6a8885a308d3, 0x13198a2e03707344,
 	0xa4093822299f31d0, 0x082efa98ec4e6c89,
 	0x452821e638d01377, 0xbe5466cf34e90c6c,
@@ -44,7 +64,7 @@ constexpr std::array<u64, 16> C64 = {
 };
 
 // Permutations
-constexpr std::array<std::array<int, 16>, 10> SIGMA = { {
+constexpr std::array<std::array<unsigned int, 16>, 10> SIGMA = { {
 	{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15},
 	{14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3},
 	{11, 8, 12, 0, 5, 2, 15, 13, 10, 14, 3, 6, 7, 1, 9, 4},
@@ -57,201 +77,212 @@ constexpr std::array<std::array<int, 16>, 10> SIGMA = { {
 	{10, 2, 8, 4, 7, 6, 1, 5, 15, 11, 9, 14, 3, 12, 13, 0}
 } };
 
-class Blake32 {
+template<class T>
+class Blake {
 public:
-	explicit Blake32(int type);
-	void load_salt(const str& salt);
-	void load_string(const str& input);
-	auto output() const->str;
-private:
-	std::array<u32, 8> m_h{ {} };
-	std::array<u32, 4> m_salt{ {0, 0, 0, 0} };
-	std::array<u32, 16> m_block{ {} };
-	std::array<u32, 16> m_v{ {} };
-	u64 m_counter = 0;
-	int m_type;
+	Blake(unsigned int type);
+	void load_salt(std::istream* const salt);
+	auto hexdigest(std::istream* const input)->std::string* const;
 
+private:
+	std::array<T, H_SIZE> m_h = {};
+	std::array<T, SALT_SIZE> m_salt = {};
+	std::array<T, BLOCK_SIZE> m_block = {};
+	std::array<T, BLOCK_SIZE> m_v = {};
+
+	u64 m_counter = 0;
+	unsigned int m_type;
+
+	void load(std::istream* const input);
 	void handle();
-	void G(int r, int a, int b, int c, int d, int i);
+	void G(unsigned int r, unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int i);
+
+	// For debugging purposes
+	void print_block() const;
 };
 
-Blake32::Blake32(int type) : m_type(type)
-{
-	if (type == 256) {
-		m_h = IV32;
+// For debugging purposes
+template<class T>
+void Blake<T>::print_block() const {
+	unsigned int i;
+	unsigned int perline = 4;
+
+	if constexpr (std::is_same<T, u64>::value) {
+		perline = 2;
 	}
-	else if (type == 224) {
-		m_h = IV24;
+
+	for (i = 0; i < BLOCK_SIZE; i++) {
+		std::cout << to_hex<T>(m_block.at(i)) << " ";
+		if ((i + 1) % perline == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << "- ";
+		}
 	}
-	else {
-		// We should technically never end up here
-		throw "Not implemented!";
+	std::cout << std::endl;
+}
+
+template<class T>
+Blake<T>::Blake(unsigned int type) : m_type(type) {
+	if constexpr (std::is_same<T, u32>::value) {
+		if (type == 256) {
+			m_h = IV32;
+		} else if (type == 224) {
+			m_h = IV24;
+		} else {
+			throw TC::exceptions::NotImplementedError("Blake: The type is not implemented!");
+		}
+	} else if constexpr (std::is_same<T, u64>::value) {
+		if (type == 512) {
+			m_h = IV64;
+		} else if (type == 384) {
+			m_h = IV38;
+		} else {
+			throw TC::exceptions::NotImplementedError("Blake: The type is not implemented!");
+		}
+	} else {
+		throw TC::exceptions::NotImplementedError("Blake: The template type is not implemented!");
 	}
 }
 
-void Blake32::load_salt(const str& salt) {
-	if (salt.length() == 0)
-		return;
+template<class T>
+auto Blake<T>::hexdigest(std::istream* const input) -> std::string* const {
+	load(input);
 
-	if (salt.length() > 16)
-		throw "The salt can only be 16 bytes or less!";
-
-	// Make an array named c_salt and fill it with zeroes
-	std::array<u8, 16> c_salt{ {} };
-	for (int i = 0; i < c_salt.size(); i++) {
-		c_salt[i] = 0x00;
+	static std::string result = "";
+	for (unsigned int i = 0; i < (m_type / T_BITS); i++) {
+		result += to_hex<T>(m_h[i]);
 	}
-
-	// Copy the 16 bytes of salt into c_salt.
-	// If salt is shorter than 16 bytes, copy
-	// all the bytes into c_salt.
-	int salt_index = salt.length() - 1;
-	for (int i = 15; i >= 0; i--) {
-		c_salt.at(i) = salt[salt_index--];
-		if (salt_index < 0) {
-			break;
-		}
-	}
-
-	// Copy c_salt into m_salt
-	for (int i = 0; i < 4; i++) {
-		m_salt.at(i) = u8_to_u32(
-			c_salt.at((i * 4)),
-			c_salt.at((i * 4) + 1),
-			c_salt.at((i * 4) + 2),
-			c_salt.at((i * 4) + 3)
-		);
-	}
+	return &result;
 }
 
-void Blake32::load_string(const str& input)
-{
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index = 0;
+template<class T>
+void Blake<T>::load_salt(std::istream* const salt) {
+	char* buffer = new char[SALT_BYTES];
+	size_t read = 0;
+	unsigned int i;
 
-	// Debugging
-	/*printf("Salt: ");
-	for (int i = 0; i < m_salt.size(); i++)
-		printf("0x%lx, ", m_salt[i]);
-	printf("\n");*/
-
-	while (input.length() - offset >= 64) {
-		// Load bytes from input into m_block
-		for (int i = 0; i < 16; i++) {
-			m_block.at(i) = u8_to_u32(
-				input[(i * 4) + offset + 0],
-				input[(i * 4) + offset + 1],
-				input[(i * 4) + offset + 2],
-				input[(i * 4) + offset + 3]
-			);
+	// Load salt
+	while (salt->peek() != EOF) {
+		if (!salt->good()) {
+			throw TC::exceptions::TCException("Blake: Could not read the salt!");
 		}
 
-		m_counter += 512;
-		handle();
-		offset += 64;
-	}
+		read = salt->readsome(buffer, SALT_BYTES);
 
-	// Load the remaining whole 32-bit words from input
-	if ((input.length() - offset) >= 4) {
-		int rem_bytes = (input.length() - offset) % 4;
-		int rem_whole = (input.length() - offset - rem_bytes) / 4;
-		size_t new_offset = offset;
-
-		for (int i = 0; i < (rem_whole * 4); i += 4) {
-			m_block.at(index++) = u8_to_u32(
-				input[i + offset + 0],
-				input[i + offset + 1],
-				input[i + offset + 2],
-				input[i + offset + 3]
-			);
-
-			new_offset += 4;
+		// Read whole dwords
+		for (i = 0; i < (read / T_BYTES); i++) {
+			m_salt.at((T_BYTES - 1) - i) = load_be<T>(buffer, SALT_BYTES, i * T_BYTES);
 		}
 
-		m_counter += (rem_whole * 32) + (rem_bytes * 8);
-		offset = new_offset;
+		// Read in the rest
+		if ((read % T_BYTES) > 0) {
+			m_salt.at((T_BYTES - 1) - i) = load_be<T>(buffer, SALT_BYTES, i * T_BYTES, read % T_BYTES);
+		}
 	}
 
-	// Load the remaining bytes from input
-	switch ((input.length() - offset)) {
-	case 0:
-		m_block.at(index++) = u8_to_u32(
-			0x80,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 1:
-		m_block.at(index++) = u8_to_u32(
-			input[offset],
-			0x80,
-			0x00,
-			0x00
-		);
-		break;
-	case 2:
-		m_block.at(index++) = u8_to_u32(
-			input[offset],
-			input[offset + 1],
-			0x80,
-			0x00
-		);
-		break;
-	case 3:
-		m_block.at(index++) = u8_to_u32(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			0x80
-		);
-		break;
-	default:
-		break;
+	delete[] buffer;
+
+	// For debugging
+	/*std::cout << "Salt: " << std::endl;
+	for (i = 0; i < 4; i++) {
+		std::cout << to_hex<u32>(m_salt.at(i));
+		if (i < 3) {
+			std::cout << " - ";
+		}
+	}
+	std::cout << std::endl << std::endl;*/
+}
+
+template<class T>
+void Blake<T>::load(std::istream* const input) {
+	char* buffer = new char[BLOCK_BYTES];
+	size_t read = 0;
+	unsigned int i;
+	
+	// Load input
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("Blake: Could not read the input!");
+		}
+
+		read = input->readsome(buffer, BLOCK_BYTES);
+		m_counter += read * 8;
+
+		// Read whole dwords
+		for (i = 0; i < (read / T_BYTES); i++) {
+			m_block.at(i) = load_be<T>(buffer, BLOCK_BYTES, i * T_BYTES);
+		}
+
+		// Read in the rest
+		if ((read % T_BYTES) > 0) {
+			m_block.at(i) = load_be<T>(buffer, BLOCK_BYTES, i * T_BYTES, read % T_BYTES);
+		}
+
+		// Process the block if it's big enough
+		if (read == BLOCK_BYTES) {
+			handle();
+			read = 0;
+		}
 	}
 
-	if (index + 2 > 16) {
-		while (index < 16)
-			m_block.at(index++) = 0x00;
+	delete[] buffer;
 
+	// Apply padding
+	m_block.at(read / T_BYTES) ^= xor_mask_be<T>(0x80, read % T_BYTES);
+
+	if (read + 8 >= BLOCK_BYTES) {
 		handle();
-		index = 0;
 	}
 
-	// Pad with zeroes
-	while (index + 2 < 16)
-		m_block.at(index++) = 0x00;
+	if (m_type == 256 || m_type == 512)
+		m_block.at(BLOCK_SIZE - 3) ^= (T)0x01;
 
-	// A hacky way to add the last padding bit
-	if (m_type == 256)
-		m_block.at(index - 1) |= 1;
-
-	// Append the message length
-	m_block.at(index++) = leftrotate_u64(length, 32) & 0xffffffff;
-	m_block.at(index++) = length & 0xffffffff;
+	// Append message length
+	if constexpr (std::is_same<T, u32>::value) {
+		m_block.at(BLOCK_SIZE - 1) = m_counter & U32MAX;
+		m_block.at(BLOCK_SIZE - 2) = (m_counter >> 32) & U32MAX;
+	} else if constexpr (std::is_same<T, u64>::value) {
+		m_block.at(BLOCK_SIZE - 1) = m_counter;
+	} else {
+		throw TC::exceptions::NotImplementedError("Blake: The template type is not supported!");
+	}
 
 	handle();
 }
 
-void Blake32::G(int r, int a, int b, int c, int d, int i)
+template<class T>
+void Blake<T>::G(unsigned int r, unsigned int a, unsigned int b, unsigned int c, unsigned int d, unsigned int i)
 {
-	u32 va = m_v[a];
-	u32 vb = m_v[b];
-	u32 vc = m_v[c];
-	u32 vd = m_v[d];
+	T va = m_v[a];
+	T vb = m_v[b];
+	T vc = m_v[c];
+	T vd = m_v[d];
 
-	int sri = SIGMA[r % 10][i];
-	int sri1 = SIGMA[r % 10][i + 1];
+	unsigned int sri = SIGMA.at((size_t)(r) % 10).at(i);
+	unsigned int sri1 = SIGMA.at((size_t)(r) % 10).at((size_t)(i) + 1);
 
-	va = va + vb + (m_block[sri] ^ C32[sri1]);
-	vd = rightrotate_u32((vd ^ va), 16);
-	vc = vc + vd;
-	vb = rightrotate_u32((vb ^ vc), 12);
-	va = va + vb + (m_block[sri1] ^ C32[sri]);
-	vd = rightrotate_u32((vd ^ va), 8);
-	vc = vc + vd;
-	vb = rightrotate_u32((vb ^ vc), 7);
+	if constexpr (std::is_same<T, u32>::value) {
+		va = va + vb + (m_block[sri] ^ C32[sri1]);
+		vd = rotateright<T>((vd ^ va), 16);
+		vc = vc + vd;
+		vb = rotateright<T>((vb ^ vc), 12);
+		va = va + vb + (m_block[sri1] ^ C32[sri]);
+		vd = rotateright<T>((vd ^ va), 8);
+		vc = vc + vd;
+		vb = rotateright<T>((vb ^ vc), 7);
+	} else if constexpr (std::is_same<T, u64>::value) {
+		va = va + vb + (m_block[sri] ^ C64[sri1]);
+		vd = rotateright<u64>((vd ^ va), 32);
+		vc = vc + vd;
+		vb = rotateright<u64>((vb ^ vc), 25);
+		va = va + vb + (m_block[sri1] ^ C64[sri]);
+		vd = rotateright<u64>((vd ^ va), 16);
+		vc = vc + vd;
+		vb = rotateright<u64>((vb ^ vc), 11);
+	} else {
+		throw TC::exceptions::NotImplementedError("Blake: The template type is not implemented!");
+	}
 
 	m_v[a] = va;
 	m_v[b] = vb;
@@ -259,321 +290,199 @@ void Blake32::G(int r, int a, int b, int c, int d, int i)
 	m_v[d] = vd;
 }
 
-void Blake32::handle()
-{
+template<class T>
+void Blake<T>::handle() {
 	// Debugging
-	/*printf("Block:\n");
-	for (int i = 0; i < m_block.size(); i++)
-		printf("0x%lx,\n", m_block[i]);
-	printf("\n");
+	//print_block();
 
-	printf("Counter: 0x%llx\n", m_counter);
-
-	printf("H:\n");
-	for (int i = 0; i < m_h.size(); i++)
-		printf("0x%lx,\n", m_h[i]);
-	printf("\n");*/
+	size_t i;
 
 	// INITIALIZE V
-	for (int i = 0; i < m_v.size(); i++)
-		m_v[i] = 0;
+	m_v.fill(0);
 
 	// Load m_h into m_v
-	for (int i = 0; i < m_h.size(); i++)
+	for (i = 0; i < H_SIZE; i++)
 		m_v[i] = m_h[i];
 
-	// Load m_salt into m_v
-	for (int i = 0; i < m_salt.size(); i++)
-		m_v[i + 8] = m_salt[i] ^ C32[i];
+	if constexpr (std::is_same<T, u32>::value) {
+		// Load m_salt into m_v
+		for (i = 0; i < SALT_SIZE; i++)
+			m_v[i + 8] = m_salt[i] ^ C32[i];
 
-	// Load m_counter into m_v
-	m_v[12] = (m_counter & 0xffffffff) ^ C32[4];
-	m_v[13] = (m_counter & 0xffffffff) ^ C32[5];
-	m_v[14] = (leftrotate_u64(m_counter, 32) & 0xffffffff) ^ C32[6];
-	m_v[15] = (leftrotate_u64(m_counter, 32) & 0xffffffff) ^ C32[7];
+		// Load m_counter into m_v
+		m_v[12] = (m_counter & U32MAX) ^ C32[4];
+		m_v[13] = (m_counter & U32MAX) ^ C32[5];
+		m_v[14] = (rotateleft<u64>(m_counter, 32) & U32MAX) ^ C32[6];
+		m_v[15] = (rotateleft<u64>(m_counter, 32) & U32MAX) ^ C32[7];
 
-	// Debugging
-	/*printf("V:\n");
-	for (int i = 0; i < m_v.size(); i++)
-		printf("0x%lx,\n", m_v[i]);
-	printf("\n");*/
+		// ROUND FUNCTION
+		for (unsigned int round = 0; round < 14; round++) {
+			G(round, 0, 4, 8, 12, 0);
+			G(round, 1, 5, 9, 13, 2);
+			G(round, 2, 6, 10, 14, 4);
+			G(round, 3, 7, 11, 15, 6);
+			G(round, 0, 5, 10, 15, 8);
+			G(round, 1, 6, 11, 12, 10);
+			G(round, 2, 7, 8, 13, 12);
+			G(round, 3, 4, 9, 14, 14);
+		}
+	} else if constexpr (std::is_same<T, u64>::value) {
+		// Load m_salt into m_v
+		for (i = 0; i < SALT_SIZE; i++)
+			m_v[i + 8] = m_salt[i] ^ C64[i];
 
-	// ROUND FUNCTION
-	for (int round = 0; round < 14; round++) {
-		G(round, 0, 4, 8, 12, 0);
-		G(round, 1, 5, 9, 13, 2);
-		G(round, 2, 6, 10, 14, 4);
-		G(round, 3, 7, 11, 15, 6);
-		G(round, 0, 5, 10, 15, 8);
-		G(round, 1, 6, 11, 12, 10);
-		G(round, 2, 7, 8, 13, 12);
-		G(round, 3, 4, 9, 14, 14);
+		// Load m_counter into m_v
+		m_v[12] = m_counter ^ C64[4];
+		m_v[13] = m_counter ^ C64[5];
+		m_v[14] = C64[6];
+		m_v[15] = C64[7];
+
+		// ROUND FUNCTION
+		for (unsigned int round = 0; round < 16; round++) {
+			G(round, 0, 4, 8, 12, 0);
+			G(round, 1, 5, 9, 13, 2);
+			G(round, 2, 6, 10, 14, 4);
+			G(round, 3, 7, 11, 15, 6);
+			G(round, 0, 5, 10, 15, 8);
+			G(round, 1, 6, 11, 12, 10);
+			G(round, 2, 7, 8, 13, 12);
+			G(round, 3, 4, 9, 14, 14);
+		}
+	} else {
+		throw TC::exceptions::NotImplementedError("Blake: The template type is not implemented!");
 	}
 
 	// STORE RESULTS in m_h
-	for (int i = 0; i < 8; i++) {
+	for (i = 0; i < H_SIZE; i++) {
 		m_h[i] = m_h[i] ^ m_salt[i % 4] ^ m_v[i] ^ m_v[i + 8];
 	}
+
+	// Clear m_block
+	m_block.fill(0);
 }
 
-auto Blake32::output() const -> str
-{
-	str result = "";
-	for (int i = 0; i < static_cast<int>(m_type / 32); i++) {
-		result += u32_to_hex(m_h[i]);
-	}
-	return result;
-}
-
-class Blake64 {
+/*class Blake64 {
 public:
-	explicit Blake64(int type);
-	void load_salt(const str& salt);
-	void load_string(const str& input);
+	Blake64(unsigned int type);
+	void load(std::istream* const input, std::istream* const salt);
 	auto output() const->str;
 private:
-	std::array<u64, 8> m_h{ {} };
-	std::array<u64, 4> m_salt{ {0, 0, 0, 0} };
-	std::array<u64, 16> m_block{ {} };
-	std::array<u64, 16> m_v{ {} };
+	std::array<u64, H_SIZE> m_h = {};
+	std::array<u64, SALT_SIZE> m_salt = {};
+	std::array<u64, BLOCK_SIZE> m_block = {};
+	std::array<u64, BLOCK_SIZE> m_v = {};
 	u64 m_counter = 0;
-	int m_type;
+	unsigned int m_type;
 
 	void handle();
 	void G(int r, int a, int b, int c, int d, int i);
+
+	// For debugging purposes
+	void print_block();
 };
 
-Blake64::Blake64(int type) : m_type(type)
-{
+// For debugging purposes
+void Blake64::print_block() {
+	for (unsigned int i = 0; i < BLOCK_SIZE; i++) {
+		std::cout << to_hex<u64>(m_block.at(i)) << " ";
+		if ((i + 1) % 2 == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << "- ";
+		}
+	}
+	std::cout << std::endl;
+}
+
+Blake64::Blake64(unsigned int type) : m_type(type) {
 	if (type == 512) {
 		m_h = IV64;
-	}
-	else if (type == 384) {
+	} else if (type == 384) {
 		m_h = IV38;
-	}
-	else {
-		// We should technically never end up here
-		throw "Not implemented!";
+	} else {
+		throw TC::exceptions::NotImplementedError("Blake64: The type is not implemented!");
 	}
 }
 
-void Blake64::load_salt(const str& salt) {
-	if (salt.length() == 0)
-		return;
+void Blake64::load(std::istream* input, std::istream* salt) {
+	char* buffer = new char[BLOCK64_BYTES];
+	u64 read;
+	unsigned int i;
 
-	if (salt.length() > 32)
-		throw "The salt can only be 32 bytes or less!";
+	// Load salt
+	while (salt->peek() != EOF) {
+		if (!salt->good()) {
+			throw TC::exceptions::TCException("Blake64: Could not read the salt!");
+		}
 
-	// Make an array named c_salt and fill it with zeroes
-	std::array<u8, 32> c_salt{ {} };
-	for (int i = 0; i < c_salt.size(); i++) {
-		c_salt[i] = 0x00;
-	}
+		read = salt->readsome(buffer, SALT64_BYTES);
 
-	// Copy the 32 bytes of salt into c_salt.
-	// If salt is shorter than 32 bytes, copy
-	// all the bytes into c_salt.
-	int salt_index = salt.length() - 1;
-	for (int i = 31; i >= 0; i--) {
-		c_salt.at(i) = salt[salt_index--];
-		if (salt_index < 0) {
-			break;
+		// Read whole dwords
+		for (i = 0; i < (read / 8); i++) {
+			m_salt.at(3 - i) = load_be<u64>(buffer, SALT64_BYTES, i * 8);
+		}
+
+		// Read in the rest
+		if ((read % 8) > 0) {
+			m_salt.at(3 - i) = load_be<u64>(buffer, SALT64_BYTES, i * 8, read % 8);
 		}
 	}
-
-	// Copy c_salt into m_salt
-	for (int i = 0; i < 4; i++) {
-		m_salt.at(i) = u8_to_u64(
-			c_salt.at((i * 8)),
-			c_salt.at((i * 8) + 1),
-			c_salt.at((i * 8) + 2),
-			c_salt.at((i * 8) + 3),
-			c_salt.at((i * 8) + 4),
-			c_salt.at((i * 8) + 5),
-			c_salt.at((i * 8) + 6),
-			c_salt.at((i * 8) + 7)
-		);
-	}
-}
-
-void Blake64::load_string(const str& input)
-{
-	u64 length = input.length() * 8;
-	size_t offset = 0;
-	size_t index = 0;
 
 	// Debugging
-	/*printf("Salt: ");
-	for (int i = 0; i < m_salt.size(); i++)
-		printf("0x%llx, ", m_salt[i]);
-	printf("\n");*/
+	std::cout << "Salt: " << std::endl;
+	for (i = 0; i < SALT_SIZE; i++) {
+		std::cout << to_hex<u64>(m_salt.at(i));
+		if ((i + 1) % 2 == 0) {
+			std::cout << std::endl;
+		} else {
+			std::cout << " - ";
+		}
+	}
+	std::cout << std::endl << std::endl;
 
-	while (input.length() - offset >= 128) {
-		// Load bytes from input into m_block
-		for (int i = 0; i < 16; i ++) {
-			m_block.at(i) = u8_to_u64(
-				input[(i * 8) + offset],
-				input[(i * 8) + offset + 1],
-				input[(i * 8) + offset + 2],
-				input[(i * 8) + offset + 3],
-				input[(i * 8) + offset + 4],
-				input[(i * 8) + offset + 5],
-				input[(i * 8) + offset + 6],
-				input[(i * 8) + offset + 7]
-			);
+	// Clear the buffer
+	for (i = 0; i < BLOCK64_BYTES; i++) {
+		buffer[i] = 0x00;
+	}
+
+	// Load input
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("Blake64: Could not read the input!");
 		}
 
-		m_counter += 1024;
-		handle();
-		offset += 128;
-	}
+		read = input->readsome(buffer, BLOCK64_BYTES);
+		m_counter += read * 8;
 
-	// Load the remaining whole 64-bit words from input
-	if ((input.length() - offset) >= 8) {
-		int rem_bytes = (input.length() - offset) % 8;
-		int rem_whole = (input.length() - offset - rem_bytes) / 8;
-		size_t new_offset = offset;
-
-		for (int i = 0; i < (rem_whole * 8); i += 8) {
-			m_block.at(index++) = u8_to_u64(
-				input[i + offset],
-				input[i + offset + 1],
-				input[i + offset + 2],
-				input[i + offset + 3],
-				input[i + offset + 4],
-				input[i + offset + 5],
-				input[i + offset + 6],
-				input[i + offset + 7]
-			);
-
-			new_offset += 8;
+		// Read whole dwords
+		for (i = 0; i < (read / 8); i++) {
+			m_block.at(i) = load_be<u64>(buffer, BLOCK64_BYTES, i * 8);
 		}
 
-		m_counter += (rem_whole * 64) + (rem_bytes * 8);
-		offset = new_offset;
+		// Read in the rest
+		if ((read % 8) > 0) {
+			m_block.at(i) = load_be<u64>(buffer, BLOCK64_BYTES, i * 8, read % 8);
+		}
+
+		// Process the block if it's big enough
+		if (read == BLOCK64_BYTES) {
+			handle();
+			read = 0;
+		}
 	}
 
-	// Load the remaining bytes from input
-	switch ((input.length() - offset)) {
-	case 0:
-		m_block.at(index++) = u8_to_u64(
-			0x80,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 1:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			0x80,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 2:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			0x80,
-			0x00,
-			0x00,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 3:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			0x80,
-			0x00,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 4:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			input[offset + 3],
-			0x80,
-			0x00,
-			0x00,
-			0x00
-		);
-		break;
-	case 5:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			input[offset + 3],
-			input[offset + 4],
-			0x80,
-			0x00,
-			0x00
-		);
-		break;
-	case 6:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			input[offset + 3],
-			input[offset + 4],
-			input[offset + 5],
-			0x80,
-			0x00
-		);
-		break;
-	case 7:
-		m_block.at(index++) = u8_to_u64(
-			input[offset],
-			input[offset + 1],
-			input[offset + 2],
-			input[offset + 3],
-			input[offset + 4],
-			input[offset + 5],
-			input[offset + 6],
-			0x80
-		);
-		break;
-	default:
-		break;
-	}
+	// Apply padding
+	m_block.at(read / 8) ^= xor_mask_be<u64>(0x80, read % 8);
 
-	if (index + 2 > 16) {
-		while (index < 16)
-			m_block.at(index++) = 0x00;
-
+	if (read + 17 > BLOCK64_BYTES) {
 		handle();
-		index = 0;
 	}
 
-	// Pad with zeroes
-	while (index + 2 < 16)
-		m_block.at(index++) = 0x00;
-
-	// A hacky way to add the last padding bit
 	if (m_type == 512)
-		m_block.at(index - 1) |= 1;
+		m_block.at(BLOCK_SIZE - 3) ^= (u64)0x01;
 
-	// Append the message length
-	m_block.at(index++) = 0x00;
-	m_block.at(index++) = length;
+	// Append message length
+	m_block.at(BLOCK_SIZE - 1) = m_counter;
 
 	handle();
 }
@@ -589,13 +498,13 @@ void Blake64::G(int r, int a, int b, int c, int d, int i)
 	int sri1 = SIGMA[r % 10][i + 1];
 
 	va = va + vb + (m_block[sri] ^ C64[sri1]);
-	vd = rightrotate_u64((vd ^ va), 32);
+	vd = rotateright<u64>((vd ^ va), 32);
 	vc = vc + vd;
-	vb = rightrotate_u64((vb ^ vc), 25);
+	vb = rotateright<u64>((vb ^ vc), 25);
 	va = va + vb + (m_block[sri1] ^ C64[sri]);
-	vd = rightrotate_u64((vd ^ va), 16);
+	vd = rotateright<u64>((vd ^ va), 16);
 	vc = vc + vd;
-	vb = rightrotate_u64((vb ^ vc), 11);
+	vb = rotateright<u64>((vb ^ vc), 11);
 
 	m_v[a] = va;
 	m_v[b] = vb;
@@ -606,28 +515,17 @@ void Blake64::G(int r, int a, int b, int c, int d, int i)
 void Blake64::handle()
 {
 	// Debugging
-	/*printf("Block: \n");
-	for (int i = 0; i < m_block.size(); i++)
-		printf("0x%llx,\n", m_block[i]);
-	printf("\n");
-
-	printf("Counter: 0x%llx\n", m_counter);
-
-	printf("H: \n");
-	for (int i = 0; i < m_h.size(); i++)
-		printf("0x%llx,\n", m_h[i]);
-	printf("\n");*/
+	//print_block();
 
 	// INITIALIZE V
-	for (int i = 0; i < m_v.size(); i++)
-		m_v[i] = 0;
+	m_v.fill(0);
 
 	// Load m_h into m_v
-	for (int i = 0; i < m_h.size(); i++)
+	for (int i = 0; i < H_SIZE; i++)
 		m_v[i] = m_h[i];
 
 	// Load m_salt into m_v
-	for (int i = 0; i < m_salt.size(); i++)
+	for (int i = 0; i < SALT_SIZE; i++)
 		m_v[i + 8] = m_salt[i] ^ C64[i];
 
 	// Load m_counter into m_v
@@ -635,12 +533,6 @@ void Blake64::handle()
 	m_v[13] = m_counter ^ C64[5];
 	m_v[14] = 0x00 ^ C64[6];
 	m_v[15] = 0x00 ^ C64[7];
-
-	// Debugging
-	/*printf("V:\n");
-	for (int i = 0; i < m_v.size(); i++)
-		printf("0x%llx,\n", m_v[i]);
-	printf("\n");*/
 
 	// ROUND FUNCTION
 	for (int round = 0; round < 16; round++) {
@@ -655,51 +547,63 @@ void Blake64::handle()
 	}
 
 	// STORE RESULTS in m_h
-	for (int i = 0; i < 8; i++) {
+	for (int i = 0; i < H_SIZE; i++) {
 		m_h[i] = m_h[i] ^ m_salt[i % 4] ^ m_v[i] ^ m_v[i + 8];
 	}
+
+	// Clear m_block
+	m_block.fill(0);
 }
 
 auto Blake64::output() const -> str
 {
 	str result = "";
-	for (int i = 0; i < static_cast<int>(m_type / 64); i++) {
-		result += u32_to_hex(leftrotate_u64(m_h[i], 32) & 0xffffffff);
-		result += u32_to_hex(m_h[i] & 0xffffffff);
+	for (unsigned int i = 0; i < (m_type / 64); i++) {
+		result += to_hex<u64>(m_h[i]);
 	}
 	return result;
+}*/
+
+auto TC::BLAKE::blake256(std::istream* const input, std::istream* const salt) -> std::string* const {
+	Blake<u32> inst(256);
+	inst.load_salt(salt);
+	return inst.hexdigest(input);
 }
 
-namespace BLAKE {
-	auto blake256(const str& input, const str& salt) -> str
-	{
-		Blake32 inst = Blake32(256);
-		inst.load_salt(salt);
-		inst.load_string(input);
-		return inst.output();
-	}
+auto TC::BLAKE::blake256(std::istream* const input) -> std::string* const {
+	Blake<u32> inst(256);
+	return inst.hexdigest(input);
+}
 
-	auto blake224(const str& input, const str& salt) -> str
-	{
-		Blake32 inst = Blake32(224);
-		inst.load_salt(salt);
-		inst.load_string(input);
-		return inst.output();
-	}
+auto TC::BLAKE::blake224(std::istream* const input, std::istream* const salt) -> std::string* const {
+	Blake<u32> inst(224);
+	inst.load_salt(salt);
+	return inst.hexdigest(input);
+}
 
-	auto blake384(const str& input, const str& salt) -> str
-	{
-		Blake64 inst = Blake64(384);
-		inst.load_salt(salt);
-		inst.load_string(input);
-		return inst.output();
-	}
+auto TC::BLAKE::blake224(std::istream* const input) -> std::string* const {
+	Blake<u32> inst(224);
+	return inst.hexdigest(input);
+}
 
-	auto blake512(const str& input, const str& salt) -> str
-	{
-		Blake64 inst = Blake64(512);
-		inst.load_salt(salt);
-		inst.load_string(input);
-		return inst.output();
-	}
+auto TC::BLAKE::blake384(std::istream* const input, std::istream* const salt) -> std::string* const {
+	Blake<u64> inst(384);
+	inst.load_salt(salt);
+	return inst.hexdigest(input);
+}
+
+auto TC::BLAKE::blake384(std::istream* const input) -> std::string* const {
+	Blake<u64> inst(384);
+	return inst.hexdigest(input);
+}
+
+auto TC::BLAKE::blake512(std::istream* const input, std::istream* const salt) -> std::string* const {
+	Blake<u64> inst(512);
+	inst.load_salt(salt);
+	return inst.hexdigest(input);
+}
+
+auto TC::BLAKE::blake512(std::istream* const input) -> std::string* const {
+	Blake<u64> inst(512);
+	return inst.hexdigest(input);
 }

@@ -45,5 +45,4 @@ jobs:
           buildPreset: 'default'
 
       - name: Run CTest
-        if: ${{matrix.os == 'ubuntu-latest'}}
-        run: cd ${{ github.workspace }}/build && ctest
+        run: cd ./build && ctest -V
