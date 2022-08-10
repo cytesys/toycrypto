@@ -53,7 +53,6 @@ public:
 private:
 	unsigned int m_rate;
 	unsigned int m_cap;
-	unsigned int m_mod;
 	std::array<u64, 25> m_state = {};
 
 	void keccakf();
@@ -210,9 +209,9 @@ void Keccak1600::sponge(std::istream* const input, u8 dsuf) {
 	// Apply padding
 	//std::cout << "Step 2e" << std::endl;
 	//m_state.at((blocksize++) / 8) ^= (u64)dsuf << ((read % 8) * 8);
-	m_state.at((blocksize++) / 8) ^= xor_mask_le<u64>(dsuf, blocksize);
+	m_state.at(blocksize / 8) ^= xor_mask_le<u64>(dsuf, blocksize);
 
-	if (((dsuf & 0x80) != 0) && (blocksize == rate)) {
+	if (((dsuf & 0x80) != 0) && (blocksize + 1 == rate)) {
 		keccakf();
 	}
 
