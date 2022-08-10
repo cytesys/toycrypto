@@ -1,6 +1,6 @@
 # Toycrypto
 ![C/C++ CI](https://github.com/cytesys/toycrypto/workflows/C/C++%20CI/badge.svg?branch=main)
-[![CodeQL](https://github.com/cytesys/toycrypto/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/cytesys/toycrypto/actions/workflows/codeql-analysis.yml)
+![CodeQL](https://github.com/cytesys/toycrypto/actions/workflows/codeql.yml/badge.svg)
 [![Coverity](https://scan.coverity.com/projects/25133/badge.svg)](https://scan.coverity.com/projects/cytesys-toycrypto)
 ## Introduction
 This is a dynamically linked crypto library written in C++.
