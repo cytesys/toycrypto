@@ -50,7 +50,7 @@ T load_be(const char* buffer, unsigned int bufsize, unsigned int offset, unsigne
 
 	for (unsigned int i = 0; i < num; i++) {
 		temp <<= 8;
-		temp |= buffer[offset + i];
+		temp |= (u8)(buffer[offset + i]);
 	}
 	temp <<= (sizeof(T) - num) * 8;
 	return temp;
@@ -76,7 +76,7 @@ T load_le(const char* buffer, unsigned int bufsize, unsigned int offset, unsigne
 	unsigned int j = num - 1;
 	for (unsigned int i = 0; i < num; i++) {
 		temp <<= 8;
-		temp |= buffer[offset + (j--)];
+		temp |= (u8)(buffer[offset + (j--)]);
 	}
 	return temp;
 }

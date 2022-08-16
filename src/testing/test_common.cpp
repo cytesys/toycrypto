@@ -88,7 +88,27 @@ void test_load_be() {
 		exit(1);
 	}
 
+	temp = load_be<u32>(buffer, BSIZE, 0x10);
+	if (!(temp == 0x10111213)) {
+		std::cout << "load_be<u32> #10 failed: got 0x" << to_hex<u32>(temp) << std::endl;
+		exit(1);
+	}
+
 	delete[] buffer;
+}
+
+void test_load_be_extended() {
+	char* buffer = new char[BSIZE];
+	for (int i = 0; i < BSIZE; i++) {
+		buffer[i] = i + 0xd0;
+	}
+
+	// Test load_be<u32>()
+	u32 temp = load_be<u32>(buffer, BSIZE, 0);
+	if (!(temp == 0xd0d1d2d3)) {
+		std::cout << "load_be_extended<u32> #0 failed: got 0x" << to_hex<u32>(temp) << std::endl;
+		exit(1);
+	}
 }
 
 void test_load_le() {
@@ -266,11 +286,12 @@ void test_to_hex() {
 }
 
 int main(int argc, char** argv) {
+	test_to_hex();
 	test_load_be();
+	test_load_be_extended();
 	test_load_le();
 	test_rotateleft();
 	test_rotateright();
-	test_to_hex();
 
 	// Passed
 	std::cout << "All tests passed!" << std::endl;
