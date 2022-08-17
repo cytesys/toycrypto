@@ -4,11 +4,11 @@
 #include "common.hpp"
 #include "toycrypto.hpp"
 
-#define CHUNK_SIZE 16
-#define CHUNK_BYTES 64
-#define PADDING_BYTE 0x80
+constexpr unsigned int BLOCK_SIZE = 16;
+constexpr unsigned int BLOCK_BYTES = BLOCK_SIZE * 4;
 
-constexpr std::array<u32, 64> K = {
+constexpr unsigned int K_SIZE = 64;
+constexpr std::array<u32, K_SIZE> K = {
 	0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
 	0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
 	0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -27,11 +27,17 @@ constexpr std::array<u32, 64> K = {
 	0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
 };
 
-constexpr std::array<unsigned int, 64> S = {
+constexpr unsigned int S_SIZE = 64;
+constexpr std::array<unsigned int, S_SIZE> S = {
 	7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
 	5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
 	4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
 	6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21
+};
+
+constexpr unsigned int H_SIZE = 4;
+constexpr std::array<u32, H_SIZE> IV = {
+	0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
 };
 
 class MD5 {
@@ -39,102 +45,104 @@ public:
 	auto hexdigest(std::istream* const input)->std::string* const;
 
 private:
-	std::array<u32, CHUNK_SIZE> m_x{ {} };
-	u32 m_a = 0x67452301;
-	u32 m_b = 0xefcdab89;
-	u32 m_c = 0x98badcfe;
-	u32 m_d = 0x10325476;
+	std::array<u32, BLOCK_SIZE> m_block = {};
+	std::array<u32, H_SIZE> m_h = IV;
 
 	void load(std::istream* const input);
-	void handle();
+	void comp();
 
 	// For debugging purposes
-	void print_x() const;
+	void print_block() const;
 };
 
 // For debugging purposes
-void MD5::print_x() const {
+void MD5::print_block() const {
 	unsigned int i;
-	for (i = 0; i < m_x.size(); i++) {
-		std::cout << to_hex<u32>(m_x.at(i)) << " ";
+
+	std::cout << "-- BLOCK --" << std::endl;
+	for (i = 0; i < m_block.size(); i++) {
+		std::cout << to_hex<u32>(m_block.at(i)) << " ";
 		if ((i + 1) % 4 == 0) {
 			std::cout << std::endl;
 		} else {
 			std::cout << "- ";
 		}
 	}
-	std::cout << std::endl;
+	std::cout << "---" << std::endl << std::endl;
 }
 
 auto MD5::hexdigest(std::istream* const input) -> std::string* const {
+	// Load input
 	load(input);
 
-	static str result = "";
-	result += to_hex<u32>(m_a, true);
-	result += to_hex<u32>(m_b, true);
-	result += to_hex<u32>(m_c, true);
-	result += to_hex<u32>(m_d, true);
+	// Generate output
+	static std::string result = "";
+	for (u32 i : m_h) {
+		result += to_hex<u32>(i, true);
+	}
 	return &result;
 }
 
 void MD5::load(std::istream* const input) {
+	char* buffer = new char[BLOCK_BYTES]; 
 	u64 length = 0;
-	size_t read = 0;
+	u64 read = 0;
 	unsigned int i;
-	char* buffer = new char[CHUNK_BYTES];
 
-	// Read in the data in chunks
+	// Read the whole stream while processing it
 	while (input->peek() != EOF) {
 		if (!input->good()) {
-			throw TC::exceptions::TCException("Could not read data!");
+			throw TC::exceptions::TCException("MD5: Could not read the input!");
 		}
 
-		read = input->readsome(buffer, CHUNK_BYTES);
+		input->read(buffer, BLOCK_BYTES);
+		read = input->gcount();
 		length += read * 8;
 
-		// Read in whole dwords
 		for (i = 0; i < (read / 4); i++) {
-			m_x.at(i) = load_le<u32>(buffer, CHUNK_BYTES, i * 4);
+			m_block.at(i) = load_le<u32>(buffer, BLOCK_BYTES, i * 4);
 		}
 
-		// Read in the rest
+		// Read the rest of the bytes
 		if ((read % 4) > 0) {
-			m_x.at(i) = load_le<u32>(buffer, CHUNK_BYTES, i * 4, read % 4);
+			m_block.at(i) = load_le<u32>(buffer, BLOCK_BYTES, i * 4, read % 4);
 		}
 
-		if (read == CHUNK_BYTES) {
-			handle();
+		if (read == BLOCK_BYTES) {
+			comp();
 			read = 0;
 		}
 	}
 
 	delete[] buffer;
 
-	// Add the padding byte
-	m_x.at(read / 4) ^= xor_mask_le<u32>(PADDING_BYTE, read);
+	// Append the padding byte
+	m_block.at(read / 4) ^= xor_mask_le<u32>(0x80, read);
 
-	// Make a new block if the length don't fit
-	if (read + 8 >= CHUNK_BYTES) {
-		handle();
+	// Process the block if the message length don't fit
+	if (read + 8 >= BLOCK_BYTES) {
+		comp();
 	}
 
 	// Append the message length
-	m_x.at(CHUNK_SIZE - 2) = length & U32MAX;
-	m_x.at(CHUNK_SIZE - 1) = (length >> 32) & U32MAX;
+	m_block.at(BLOCK_SIZE - 2) = length & U32MAX;
+	m_block.at(BLOCK_SIZE - 1) = (length >> 32) & U32MAX;
 
-	handle();
+	comp();
 }
 
-void MD5::handle() {
-	//print_x();
+void MD5::comp() {
+	// For debugging purposes
+	//print_block();
+
 	unsigned int i;
 
-	u32 a = m_a;
-	u32 b = m_b;
-	u32 c = m_c;
-	u32 d = m_d;
+	u32 a = m_h.at(0);
+	u32 b = m_h.at(1);
+	u32 c = m_h.at(2);
+	u32 d = m_h.at(3);
 
-	for (i = 0; i < 64; i++) {
+	for (i = 0; i < BLOCK_BYTES; i++) {
 		u32 f, g;
 		if (i >=0 && i <=15) {
 			f = (b & c) | ((~b) & d);
@@ -150,19 +158,20 @@ void MD5::handle() {
 			g = (7 * i) % 16;
 		}
 
-		f = f + a + K[i] + m_x[g];
+		f = f + a + K.at(i) + m_block.at(g);
 		a = d;
 		d = c;
 		c = b;
-		b = b + rotateleft<u32>(f, S[i]);
+		b = b + rotateleft<u32>(f, S.at(i));
 	}
 
-	m_a += a;
-	m_b += b;
-	m_c += c;
-	m_d += d;
+	m_h.at(0) += a;
+	m_h.at(1) += b;
+	m_h.at(2) += c;
+	m_h.at(3) += d;
 
-	m_x.fill(0);
+	// Clear m_block
+	m_block.fill(0);
 }
 
 auto TC::MD::md5(std::istream* const input) -> std::string* const {

@@ -62,6 +62,9 @@ extern "C++" {
 			TC_API auto blake384(std::istream* const input)->std::string* const;
 			TC_API auto blake512(std::istream* const input, std::istream* const salt)->std::string* const;
 			TC_API auto blake512(std::istream* const input)->std::string* const;
+
+			TC_API auto blake2s(unsigned int bitlength, std::istream* const input)->std::string* const;
+			TC_API auto blake2b(unsigned int bitlength, std::istream* const input)->std::string* const;
 		}
 
 		namespace exceptions {

@@ -6,7 +6,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-//#include <filesystem>
 #include <toycrypto.hpp>
 
 int main(int argc, char** argv)
@@ -18,9 +17,6 @@ int main(int argc, char** argv)
 	int hash_length = 0;
 
 	try {
-		// Test
-		//std::cout << (-1) % 5 << std::endl;
-		//---
 		if (argc >= 3) {
 			hash_type = argv[1];
 			filename = argv[2];
@@ -32,9 +28,6 @@ int main(int argc, char** argv)
 				hash_type.pop_back();
 				data = new std::istringstream(filename);
 			} else {
-				//std::filesystem::path filepath {filename};
-				//if (std::filesystem::exists(filepath)) {
-					//data = new std::ifstream(filepath, std::ifstream::binary);
 				struct stat info;
 				int status = stat(filename.c_str(), &info);
 				if (status == -1) {
@@ -42,9 +35,6 @@ int main(int argc, char** argv)
 				}
 
 				data = new std::ifstream(filename, std::ifstream::binary);
-				//} else {
-				//	throw TC::exceptions::TCException("The file could not be found!");
-				//}
 			}
 
 			if (argc >= 4) {
@@ -91,15 +81,31 @@ int main(int argc, char** argv)
 			output = TC::BLAKE::blake384(data);
 		} else if (hash_type.compare("blake512") == 0) {
 			output = TC::BLAKE::blake512(data);
+		} else if (hash_type.compare("blake2s_128") == 0) {
+			output = TC::BLAKE::blake2s(128, data);
+		} else if (hash_type.compare("blake2s_160") == 0) {
+			output = TC::BLAKE::blake2s(160, data);
+		} else if (hash_type.compare("blake2s_224") == 0) {
+			output = TC::BLAKE::blake2s(224, data);
+		} else if (hash_type.compare("blake2s_256") == 0) {
+			output = TC::BLAKE::blake2s(256, data);
+		} else if (hash_type.compare("blake2b_160") == 0) {
+			output = TC::BLAKE::blake2b(160, data);
+		} else if (hash_type.compare("blake2b_256") == 0) {
+			output = TC::BLAKE::blake2b(256, data);
+		} else if (hash_type.compare("blake2b_384") == 0) {
+			output = TC::BLAKE::blake2b(384, data);
+		} else if (hash_type.compare("blake2b_512") == 0) {
+			output = TC::BLAKE::blake2b(512, data);
 		} else {
 			throw TC::exceptions::NotImplementedError("The hash type is not implemented!");
 		}
 	} catch (std::exception& ex) {
 		std::cout << "Error: " << ex.what() << std::endl;
-		return 1;
+		return -1;
 	} catch (const char* ex) {
 		std::cout << "Error: " << ex << std::endl;
-		return 1;
+		return -1;
 	}
 
 	std::cout << *output << std::endl;

@@ -4,10 +4,10 @@
 #include "common.hpp"
 #include "toycrypto.hpp"
 
-#define BLOCK_SIZE 16
-#define BLOCK_BYTES (BLOCK_SIZE * 4)
+constexpr unsigned int BLOCK_SIZE = 16;
+constexpr unsigned int BLOCK_BYTES = BLOCK_SIZE * 4;
 
-#define H_SIZE 5
+constexpr unsigned int H_SIZE = 5;
 constexpr std::array<u32, H_SIZE> H_INIT = {
 	0x67452301,
 	0xefcdab89,
@@ -26,20 +26,23 @@ constexpr std::array<u32, 4> K = {
 class SHA1 {
 public:
 	auto hexdigest(std::istream* const input) -> std::string* const;
+
 private:
 	std::array<u32, H_SIZE> m_h = H_INIT;
-	std::array<u32, BLOCK_SIZE> m_block{ {} };
+	std::array<u32, BLOCK_SIZE> m_block = {};
 
 	void load(std::istream* const input);
 	void comp();
 
 	// For debugging purposes
-	void print_chunk();
+	void print_block();
 };
 
 // For debugging purposes
-void SHA1::print_chunk() {
-	for (int i = 0; i < BLOCK_SIZE; i++) {
+void SHA1::print_block() {
+	unsigned int i;
+	std::cout << "-- BLOCK --" << std::endl;
+	for (i = 0; i < BLOCK_SIZE; i++) {
 		std::cout << to_hex<u32>(m_block.at(i)) << " ";
 		if ((i + 1) % 4 == 0) {
 			std::cout << std::endl;
@@ -48,12 +51,14 @@ void SHA1::print_chunk() {
 			std::cout << "- ";
 		}
 	}
-	std::cout << std::endl;
+	std::cout << "---" << std::endl << std::endl;;
 }
 
 auto SHA1::hexdigest(std::istream* const input) -> std::string* const {
+	// Load input
 	load(input);
 
+	// Generate output
 	static std::string result = "";
 	for (u32 i : m_h) {
 		result += to_hex<u32>(i);
@@ -61,15 +66,20 @@ auto SHA1::hexdigest(std::istream* const input) -> std::string* const {
 	return &result;
 }
 
-void SHA1::load(std::istream* const infile) {
+void SHA1::load(std::istream* const input) {
+	char* buffer = new char[BLOCK_BYTES]; 
 	u64 length = 0;
-	size_t read = 0;
-	char* buffer = new char[BLOCK_BYTES];
+	u64 read = 0;
 	unsigned int i;
 
 	// Read the entire file
-	while (infile->peek() != EOF) {
-		read = infile->readsome(buffer, BLOCK_BYTES);
+	while (input->peek() != EOF) {
+		if (!input->good()) {
+			throw TC::exceptions::TCException("SHA1: Could not read the input!");
+		}
+
+		input->read(buffer, BLOCK_BYTES);
+		read = input->gcount();
 		length += read * 8;
 
 		// Read in whole dwords
@@ -106,7 +116,7 @@ void SHA1::load(std::istream* const infile) {
 
 void SHA1::comp()
 {
-	//print_chunk();
+	//print_block();
 	std::array<u32, 80> words = {};
 	size_t j;
 
@@ -115,7 +125,7 @@ void SHA1::comp()
 		words.at(j) = m_block.at(j);
 	}
 
-	// Clear m_chunk
+	// Clear m_block
 	m_block.fill(0);
 
 	// Extend the words-array to 80 words
@@ -126,12 +136,11 @@ void SHA1::comp()
 		);
 	}
 
-	// Init hash value for this chunk
-	u32 a = m_h[0];
-	u32 b = m_h[1];
-	u32 c = m_h[2];
-	u32 d = m_h[3];
-	u32 e = m_h[4];
+	u32 a = m_h.at(0);
+	u32 b = m_h.at(1);
+	u32 c = m_h.at(2);
+	u32 d = m_h.at(3);
+	u32 e = m_h.at(4);
 
 	u32 f, k;
 
@@ -160,11 +169,11 @@ void SHA1::comp()
 		a = temp;
 	}
 
-	m_h[0] += a;
-	m_h[1] += b;
-	m_h[2] += c;
-	m_h[3] += d;
-	m_h[4] += e;
+	m_h.at(0) += a;
+	m_h.at(1) += b;
+	m_h.at(2) += c;
+	m_h.at(3) += d;
+	m_h.at(4) += e;
 }
 
 auto TC::SHA::sha1(std::istream* const input) -> std::string* const {

@@ -4,7 +4,8 @@
 #include "common.hpp"
 #include "toycrypto.hpp"
 
-#define CHUNK_SIZE 16
+constexpr unsigned int BLOCK_SIZE = 16;
+constexpr unsigned int H_SIZE = 48;
 
 constexpr std::array<u8, 256> S = {
 	0x29, 0x2E, 0x43, 0xC9, 0xA2, 0xD8, 0x7C, 0x01,
@@ -44,26 +45,28 @@ constexpr std::array<u8, 256> S = {
 class MD2 {
 public:
 	auto hexdigest(std::istream* const input)->std::string* const;
+
 private:
-	std::array<u8, CHUNK_SIZE> m_chunk{ {} };
-	std::array<u8, 16> m_c{ {} };
-	std::array<u8, 48> m_x{ {} };
+	std::array<u8, BLOCK_SIZE> m_block = {};
+	std::array<u8, BLOCK_SIZE> m_c = {};
+	std::array<u8, H_SIZE> m_h = {};
 	u8 m_l = 0;
 
 	void load(std::istream* const input);
 	void checksum_round();
-	void handle();
+	void comp();
 };
 
 auto MD2::hexdigest(std::istream* const input) -> std::string* const {
-	unsigned int i;
-
+	// Load input
 	load(input);
 
+	// Generate output
 	static std::string result = "";
+	unsigned int i;
 
-	for (i = 0; i < CHUNK_SIZE; i++) {
-		result += to_hex<u8>(m_x.at(i));
+	for (i = 0; i < BLOCK_SIZE; i++) {
+		result += to_hex<u8>(m_h.at(i));
 	}
 
 	return &result;
@@ -71,74 +74,78 @@ auto MD2::hexdigest(std::istream* const input) -> std::string* const {
 
 void MD2::load(std::istream* const input)
 {
-	size_t read = 0;
+	char* buffer = new char[BLOCK_SIZE];
+	u64 read = 0;
 	unsigned int i;
-	char* buffer = new char[CHUNK_SIZE];
 
-	// Read in the data in chunks
+	// Read the input while processing it
 	while (input->peek() != EOF) {
 		if (!input->good()) {
-			throw TC::exceptions::TCException("Can not read from file!");
+			throw TC::exceptions::TCException("MD2: Cannot read input!");
 		}
 
-		read = input->readsome(buffer, CHUNK_SIZE);
+		input->read(buffer, BLOCK_SIZE);
+		read = input->gcount();
+
 		for (i = 0; i < read; i++) {
-			m_chunk.at(i) = buffer[i];
+			m_block.at(i) = buffer[i];
 		}
 
-		if (read == CHUNK_SIZE) {
-			handle();
+		if (read == BLOCK_SIZE) {
+			comp();
 			read = 0;
 		}
 	}
 
 	delete[] buffer;
 
-	// Apply padding
-	u8 rounds = CHUNK_SIZE - (read % CHUNK_SIZE);
-	for (i = 0; i < rounds; i++)
-		m_chunk.at(read++) = rounds;
+	// Append padding
+	u8 rounds = BLOCK_SIZE - (read % BLOCK_SIZE);
+	for (i = 0; i < rounds; i++) {
+		m_block.at(read++) = rounds;
+	}
 
-	handle();
+	comp();
 
-	// Apply checksum
-	for (i = 0; i < CHUNK_SIZE; i++)
-		m_chunk.at(i) = m_c[i];
+	// Append checksum
+	for (i = 0; i < BLOCK_SIZE; i++)
+		m_block.at(i) = m_c.at(i);
 
-	handle();
+	comp();
 }
 
 void MD2::checksum_round()
 {
-	unsigned int j;
-	for (j = 0; j < CHUNK_SIZE; j++) {
-		u8 by = m_chunk.at(j);
-		m_c.at(j) ^= S.at(by ^ m_l);
-		m_l = m_c.at(j);
+	unsigned int i;
+	for (i = 0; i < BLOCK_SIZE; i++) {
+		u8 by = m_block.at(i);
+		m_c.at(i) ^= S.at(by ^ m_l);
+		m_l = m_c.at(i);
 	}
 }
 
-void MD2::handle()
+void MD2::comp()
 {
-	size_t j;
-	unsigned int k;
-
 	checksum_round();
-	for (j = 0; j < 16; j++) {
-		m_x.at(j + 16) = m_chunk.at(j);
-		m_x.at(j + 32) = m_x.at(j + 16) ^ m_x.at(j);
+
+	unsigned int i;
+	unsigned int j;
+
+	for (i = 0; i < 16; i++) {
+		m_h.at(i + 16) = m_block.at(i);
+		m_h.at(i + 32) = m_h.at(i + 16) ^ m_h.at(i);
 	}
 
 	u8 t = 0;
 
-	for (j = 0; j < 18; j++) {
-		for (k = 0; k < 48; k++) {
-			u8 temp = m_x.at(k) ^ S.at(t);
+	for (i = 0; i < 18; i++) {
+		for (j = 0; j < 48; j++) {
+			u8 temp = m_h.at(j) ^ S.at(t);
 			t = temp;
-			m_x.at(k) = temp;
+			m_h.at(j) = temp;
 		}
 
-		t = (u8)(t + j);
+		t += i;
 	}
 }
 

@@ -23,6 +23,7 @@ add_library(toycrypto SHARED
 
 	# BLAKE
 	${PROJECT_SOURCE_DIR}/src/blake.cpp
+	${PROJECT_SOURCE_DIR}/src/blake2.cpp
 )
 
 set_target_properties(toycrypto PROPERTIES VERSION ${PROJECT_VERSION})
@@ -47,16 +48,18 @@ enable_testing()
 
 # Can the application run at all?
 add_test(NAME Executes COMMAND toycrypto_exec)
-set_tests_properties(Executes
-  PROPERTIES PASS_REGULAR_EXPRESSION "Usage: .*output_length\]"
-  )
 
 # Test common functionality
 add_test(NAME test_common COMMAND test_common)
 
 # Make testfile
 set(testfile ${PROJECT_BINARY_DIR}/testfile)
-file(WRITE ${testfile} "The quick brown fox jumped over the lazy dog")
+file(WRITE ${testfile} "")
+foreach(i RANGE 1000)
+	string(RANDOM LENGTH 1000 testdata)
+	file(APPEND ${testfile} ${testdata})
+endforeach()
+unset(i)
 
 # This is a fairly simple cmake function to aid in making automated tests
 function(create_test testname algo len text filename)
@@ -143,17 +146,13 @@ function(create_test testname algo len text filename)
 endfunction(create_test)
 
 # Do a bunch of result based tests
+# This cannot be the greatest way of testing things. Will fix in the future.
 set(hash_functions "sha1;sha224;sha256;sha384;sha512;sha3_224;sha3_256;sha3_384;sha3_512;md5")
 foreach(hash_function IN LISTS hash_functions)
-	foreach(i RANGE 100)
-		math(EXPR testlength "100 + ${i}")
+	foreach(i RANGE 1 20)
+		math(EXPR testlength "13 * ${i}" OUTPUT_FORMAT DECIMAL)
 		string(RANDOM LENGTH ${testlength} teststring)
 		create_test("test_${hash_function}_${testlength}" "${hash_function}" "" "${teststring}" "")
 	endforeach()
 	create_test("test_${hash_function}_file" "${hash_function}" "" "" "${testfile}")
 endforeach()
-
-# TODO: MD2, MD4 and BLAKE are all outdated, and CMake has neither of them built in, so these cannot
-# be automatically tested the same way as those above. I need another program (or maybe multiple programs)
-# that can reliably compute these hashes so I can compare the computed hashes from this library with those.
-# For now, these hash functions are tested manually.

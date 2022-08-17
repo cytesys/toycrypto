@@ -109,6 +109,8 @@ void test_load_be_extended() {
 		std::cout << "load_be_extended<u32> #0 failed: got 0x" << to_hex<u32>(temp) << std::endl;
 		exit(1);
 	}
+
+	delete[] buffer;
 }
 
 void test_load_le() {
@@ -196,6 +198,40 @@ void test_load_le() {
 	}
 }
 
+void test_load_le_extended() {
+	char* buffer = new char[BSIZE];
+	for (int i = 0; i < BSIZE; i++) {
+		buffer[i] = i + 0xd0;
+	}
+
+	// Test load_be<u32>()
+	u32 temp = load_le<u32>(buffer, BSIZE, 0);
+	if (!(temp == 0xd3d2d1d0)) {
+		std::cout << "load_le_extended #0 failed: got 0x" << to_hex<u32>(temp) << std::endl;
+		exit(1);
+	}
+
+	u64 temp2 = load_le<u64>(buffer, BSIZE, 0);
+	if (!(temp2 == 0xd7d6d5d4d3d2d1d0)) {
+		std::cout << "load_le_extended #1 failed: got 0x" << to_hex<u64>(temp2) << std::endl;
+		exit(1);
+	}
+
+	temp2 = load_le<u64>(buffer, BSIZE, 0, 1);
+	if (!(temp2 == 0x00000000000000d0)) {
+		std::cout << "load_le_extended #2 failed: got 0x" << to_hex<u64>(temp2) << std::endl;
+		exit(1);
+	}
+
+	temp2 = load_le<u64>(buffer, BSIZE, 16, 1);
+	if (!(temp2 == 0x00000000000000e0)) {
+		std::cout << "load_le_extended #3 failed: got 0x" << to_hex<u64>(temp2) << std::endl;
+		exit(1);
+	}
+
+	delete[] buffer;
+}
+
 void test_rotateleft() {
 	u32 test = 1;
 	u32 temp = rotateleft<u32>(test, 63);
@@ -235,7 +271,7 @@ void test_rotateright() {
 }
 
 void test_to_hex() {
-	str temp;
+	std::string temp;
 	temp = to_hex<u8>(0xab);
 	if (!(temp.compare("ab") == 0)) {
 		std::cout << "to_hex #0 failed: got " << temp << std::endl;
@@ -290,6 +326,7 @@ int main(int argc, char** argv) {
 	test_load_be();
 	test_load_be_extended();
 	test_load_le();
+	test_load_le_extended();
 	test_rotateleft();
 	test_rotateright();
 
