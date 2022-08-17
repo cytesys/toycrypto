@@ -14,9 +14,8 @@ C++17 and CMake 3.12 or higher are required. It should work on Linux, Windows an
 - [x] MD2
 - [x] MD4
 - [x] MD5
-- [ ] MD6
 - [x] BLAKE
-- [ ] BLAKE2
+- [x] BLAKE2
 
 ## How to build and test
 ### Dependencies
