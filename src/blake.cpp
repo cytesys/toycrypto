@@ -170,6 +170,7 @@ void Blake<T>::load_salt(std::istream* const salt) {
 
 	// Load salt
 	if (salt->peek() == EOF) {
+		delete[] buffer;
 		return;
 	}
 
