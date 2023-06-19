@@ -63,11 +63,11 @@ I use [GTest](https://github.com/google/googletest/) for testing, and it should 
 Building is pretty straight forward\:
 
 ```bash
-cmake -S . -B out
-cmake --build out
+cmake -S . -B build
+cmake --build build
 
 # To run the tests
-cd out
-ctest .
+cd build
+ctest
 ```
 

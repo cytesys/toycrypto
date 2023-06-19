@@ -6,12 +6,8 @@ project(toycrypto VERSION 0.0.1)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(BUILD_SHARED_LIBS ON)
 
-# Put everything in the same place for now
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+option(BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
 
 set(TC_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(TC_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -23,13 +19,14 @@ add_subdirectory(${TC_SRC_DIR})
 
 # Build the toycrypto library
 add_library(toycrypto SHARED ${TC_SOURCES} ${TC_HEADERS})
+add_library(toycrypto::toycrypto ALIAS toycrypto)
+target_include_directories(toycrypto PUBLIC ${TC_INC_DIR})
 set_target_properties(toycrypto PROPERTIES VERSION ${PROJECT_VERSION})
-target_include_directories(toycrypto PRIVATE ${TC_INC_DIR})
 
 # The executable try.exe is only used for testing
 add_executable(try ./src/test.cpp)
-target_link_libraries(try PRIVATE toycrypto)
-target_include_directories(try PRIVATE ${TC_INC_DIR})
+target_link_libraries(try PRIVATE toycrypto::toycrypto)
+target_include_directories(try PUBLIC ${TC_INC_DIR})
 
 # Enable testing
 enable_testing()
