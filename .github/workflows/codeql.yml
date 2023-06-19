@@ -14,11 +14,19 @@ name: "CodeQL"
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - '.github/workflows/codeql.yml'
+      - '**.cpp'
+      - '**.hpp'
+      - '**/CMakeLists.txt'
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [ "main" ]
-  schedule:
-    - cron: '23 10 * * 6'
+    paths:
+      - '.github/workflows/codeql.yml'
+      - '**.cpp'
+      - '**.hpp'
+      - '**/CMakeLists.txt'
 
 jobs:
   analyze:
