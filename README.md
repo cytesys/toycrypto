@@ -1,55 +1,73 @@
-# Toycrypto
+# ToyCrypto
+
 ![C/C++ CI](https://github.com/cytesys/toycrypto/workflows/C/C++%20CI/badge.svg?branch=main)
 ![CodeQL](https://github.com/cytesys/toycrypto/actions/workflows/codeql.yml/badge.svg)
 [![Coverity](https://scan.coverity.com/projects/25133/badge.svg)](https://scan.coverity.com/projects/cytesys-toycrypto)
-## Introduction
-This is a dynamically linked crypto library written in C++.
-C++17 and CMake 3.12 or higher are required. It should work on Linux, Windows and MacOS. The only required library is the standard library.
 
-## Currently implemented cryptographic functions
-*So far, only hashing functions are implemented.*
-- [x] SHA1
-- [x] SHA2
-- [x] SHA3
-- [x] MD2
-- [x] MD4
-- [x] MD5
+## Introduction
+
+ToyCrypto is a dynamically linked crypto library written in C\+\+. It should work on both *nix-like systems and Windows.
+
+## *Disclaimer*
+
+*This library is just me toying with C++ and crypto (hence the name), and can not be relied upon to work correctly, obviously \:]*  
+***This is for experimental use only! Use at your own risk!***
+
+## What's currently implemented?
+
+ToyCrypto is very much a work in progress, and so far only a few hashing functions has been implemented:
+
+- [x] SHA2:
+    - [x] SHA224
+    - [x] SHA256
+    - [x] SHA384
+    - [x] SHA512
+- [x] SHA3:
+    - [x] SHA3-224
+    - [x] SHA3-256
+    - [x] SHA3-384
+    - [x] SHA3-512
+- [x] SHAKE:
+    - [x] SHAKE128
+    - [x] SHAKE256
 - [x] BLAKE
+    - [x] BLAKE224
+    - [x] BLAKE256
+    - [x] BLAKE384
+    - [x] BLAKE512
 - [x] BLAKE2
+    - [x] BLAKE2s-224
+    - [x] BLAKE2s-256
+    - [x] BLAKE2b-384
+    - [x] BLAKE2b-512
+
+The following hash algorithms have also been implemented, but these have been deprecated by NIST.
+
+- [x] ~~MD2~~
+- [x] ~~MD4~~
+- [x] ~~MD5~~
+- [x] ~~SHA1~~
 
 ## How to build and test
+
 ### Dependencies
-You will need:
 
-#### On Linux:
-- CMake 3.12 or higher
-- `build-essential`
+- C\+\+20
+- CMake 3.16 or higher
 - `ninja-build`
 
-#### On Windows
-- Visual Studio (This project was built and tested locally with Visual Studio Community 2017, 2019 and 2022)
-- Support for CMake Projects in Visual Studio
-
-#### On MacOS
-- CMake 3.12 or higher
-- `ninja-build`
-
-##### Installing MacOS dependencies via homebrew
-```bash
-brew install cmake ninja
-```
+I use [GTest](https://github.com/google/googletest/) for testing, and it should be downloaded automagically when you run cmake \:]
 
 ### Building
+
+Building is pretty straight forward\:
+
 ```bash
-git clone https://github.com/cytesys/toycrypto.git
-cd toycrypto
-cmake --preset default -S . -B build
-cmake --build build
+cmake -S . -B out
+cmake --build out
 
 # To run the tests
-cd build
-ctest
+cd out
+ctest .
 ```
 
-### Disclaimer
-This library is not really made for any serious usage. It should not be used for anything other than tinkering and experimenting.

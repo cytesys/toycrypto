@@ -7,14 +7,14 @@ on:
       - '.github/workflows/main.yml'
       - '**.cpp'
       - '**.hpp'
-      - 'CMakeLists.txt'
+      - '**/CMakeLists.txt'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/main.yml'
       - '**.cpp'
       - '**.hpp'
-      - 'CMakeLists.txt'
+      - '**/CMakeLists.txt'
 
 jobs:
   build:
@@ -39,10 +39,10 @@ jobs:
         uses: lukka/get-cmake@latest
 
       - name: Run CMake
-        uses: lukka/run-cmake@main
-        with: 
-          configurePreset: 'default'
-          buildPreset: 'default'
+        run: cmake -S . -B build
+
+      - name: Run Cmake --build
+        run: cmake --build build
 
       - name: Run CTest
         run: cd ./build && ctest -V

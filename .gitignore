@@ -1,4 +1,6 @@
-.vs
-CMakeSettings.json
-build
-tools
+**/.vs
+**/.idea
+**/*.user
+/build
+/out
+/tools
