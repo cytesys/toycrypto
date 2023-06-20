@@ -1,6 +1,7 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/sha1.h>
+#include <toycrypto/common/util.h>
 
 #define SHA1_ROL(a, n) ROL((a), (n), 32)
 #define SHA1_ROR(a, n) ROR((a), (n), 32)
@@ -19,7 +20,7 @@ public:
 
     void digest(unsigned char *output, size_t outlen) override;
 
-    void hexdigest(char *output, size_t outlen) override;
+    std::string hexdigest();
 
 private:
     void m_process_block();
@@ -106,19 +107,6 @@ void SHA1Impl::digest(unsigned char *const output, const size_t outlen) {
         *(output + i) = SHA1_ROL(m_h.at(i / 4), ((i + 1) % 4) * 8) & 0xff;
 }
 
-void SHA1Impl::hexdigest(char *const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (outlen < 41)
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < 5; i++)
-        snprintf(output + (8ull * i), 9, "%08x", m_h.at(i));
-}
-
 void SHA1Impl::m_process_block() {
     uint32_t a = m_h.at(0),
         b = m_h.at(1),
@@ -197,6 +185,8 @@ void SHA1::digest(unsigned char *const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA1::hexdigest(char *const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA1::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }

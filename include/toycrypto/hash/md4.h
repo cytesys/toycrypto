@@ -16,7 +16,7 @@ extern "C++" {
         TC_API void update(const char* const buffer, const size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* const output, const size_t outlen) override;
-        TC_API void hexdigest(char* const output, const size_t outlen) override;
+        TC_API std::string hexdigest() override;
 
 		TC_API static const size_t digest_size = 16;
 

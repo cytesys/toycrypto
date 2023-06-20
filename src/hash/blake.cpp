@@ -1,6 +1,7 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/blake.h>
+#include <toycrypto/common/util.h>
 
 #define BLK_ROR(a, n) ROR((a), (n), sizeof(T) * 8)
 #define BLK_ROL(a, n) ROL((a), (n), sizeof(T) * 8)
@@ -67,8 +68,6 @@ public:
     void finalize() override;
 
     void digest(unsigned char* output, size_t outlen) override;
-
-    void hexdigest(char* output, size_t outlen) override;
 
     [[maybe_unused]] void set_salt(const char* salt, size_t saltlen);
 
@@ -320,29 +319,6 @@ void Blake<T>::digest(unsigned char *const output, const size_t outlen) {
         *(output + i) = BLK_ROL(m_h.at(i / sizeof(T)), ((i + 1) % sizeof(T)) * 8) & 0xff;
 }
 
-template<x32or64 T>
-void Blake<T>::hexdigest(char *const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (outlen < m_bits * 2 + 1)
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    /* Copy the hex representation of the bytes in m_h into
-    the output buffer. */
-    for (unsigned i = 0; i < m_bits / sizeof(T); i++) {
-        snprintf(
-            output + (sizeof(T) * 2 * i),
-            (sizeof(T) * 2) + 1,
-            "%.*llx",
-            (unsigned) (sizeof(T) * 2),
-            (uint64_t) m_h.at(i)
-        );
-    }
-}
-
 // BLAKE224
 BLAKE224::BLAKE224() : pimpl(new Blake<uint32_t>(224)) {}
 
@@ -360,8 +336,10 @@ void BLAKE224::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void BLAKE224::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string BLAKE224::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // BLAKE256
@@ -381,8 +359,10 @@ void BLAKE256::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void BLAKE256::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string BLAKE256::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // BLAKE384
@@ -402,8 +382,10 @@ void BLAKE384::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void BLAKE384::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string BLAKE384::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // BLAKE512
@@ -423,7 +405,9 @@ void BLAKE512::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void BLAKE512::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string BLAKE512::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 

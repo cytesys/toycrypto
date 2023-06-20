@@ -1,6 +1,7 @@
 ﻿#include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/sha3.h>
+#include <toycrypto/common/util.h>
 
 #define LANE(x, y) (((y) * 5) + (x))
 #define SHA3_ROR(a, n) ROR((a), (n), 64)
@@ -23,7 +24,6 @@ public:
     void update(const char* buffer, size_t buflen) override;
     void finalize() override;
     void digest(unsigned char* output, size_t outlen) override;
-    void hexdigest(char* output, size_t outlen) override;
 
 private:
     const unsigned m_rate;
@@ -190,32 +190,6 @@ void Keccak1600::digest(unsigned char* const output, const size_t outlen) {
     }
 }
 
-void Keccak1600::hexdigest(char* const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (m_state > HASH_FINAL) {
-        throw std::invalid_argument(
-            "Cannot calculate this digest twice, due to changes in the internal state."
-        );
-    }
-
-    if (outlen < (m_bytes * 2 + 1))
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < m_bytes; i++) {
-        snprintf(
-            output + (i * 2),
-            3,
-            "%02x",
-            (uint8_t)(SHA3_ROR(m_h.at((i / 8) % (m_rate / 8)), (i % 8) * 8) & 0xff)
-        );
-        if ((i + 1) % m_rate == 0) m_keccakf();
-    }
-}
-
 // SHA3-224
 SHA3_224::SHA3_224() : pimpl(new Keccak1600(448, 6, 224)) {}
 
@@ -233,8 +207,10 @@ void SHA3_224::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA3_224::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA3_224::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA3-256
@@ -254,8 +230,10 @@ void SHA3_256::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA3_256::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA3_256::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA3-384
@@ -275,8 +253,10 @@ void SHA3_384::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA3_384::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA3_384::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA3-512
@@ -296,13 +276,16 @@ void SHA3_512::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA3_512::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA3_512::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHAKE128
 SHAKE128::SHAKE128(unsigned digestbits)
-    : pimpl(new Keccak1600(256, 0x1f, digestbits)) {}
+    : pimpl(new Keccak1600(256, 0x1f, digestbits))
+    , digest_size(digestbits / 8) {}
 
 SHAKE128::~SHAKE128() = default;
 
@@ -318,13 +301,20 @@ void SHAKE128::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHAKE128::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHAKE128::hexdigest() {
+    unsigned char* buffer = reinterpret_cast<unsigned char*>(
+        calloc(digest_size, sizeof(unsigned char))
+    );
+    pimpl->digest(buffer, digest_size);
+    std::string result = TC::hexdigest(buffer, digest_size);
+    free(buffer);
+    return result;
 }
 
 // SHAKE256
 SHAKE256::SHAKE256(unsigned digestbits)
-    : pimpl(new Keccak1600(512, 0x1f, digestbits)) {}
+    : pimpl(new Keccak1600(512, 0x1f, digestbits))
+    , digest_size(digestbits / 8) {}
 
 SHAKE256::~SHAKE256() = default;
 
@@ -340,6 +330,12 @@ void SHAKE256::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHAKE256::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHAKE256::hexdigest() {
+    unsigned char* buffer = reinterpret_cast<unsigned char*>(
+        calloc(digest_size, sizeof(unsigned char))
+        );
+    pimpl->digest(buffer, digest_size);
+    std::string result = TC::hexdigest(buffer, digest_size);
+    free(buffer);
+    return result;
 }

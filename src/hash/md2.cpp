@@ -1,6 +1,7 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/md2.h>
+#include <toycrypto/common/util.h>
 
 class MD2Impl final : public HashImpl{
 public:
@@ -11,7 +12,6 @@ public:
     void update(const char* const buffer, const size_t buflen) override;
     void finalize() override;
     void digest(unsigned char* const output, const size_t outlen) override;
-    void hexdigest(char* const output, const size_t outlen) override;
 
 private:
 	void m_process_block();
@@ -122,20 +122,6 @@ void MD2Impl::digest(unsigned char* const output, const size_t outlen) {
         output[i] = m_h.at(i);
 }
 
-void MD2Impl::hexdigest(char* const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (outlen < 33)
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < 16; i++)
-        snprintf(output + (2ull * i), 3, "%.02x", m_h.at(i));
-}
-
-
 void MD2Impl::m_process_block() {
 	unsigned i, j;
     uint8_t a;
@@ -185,6 +171,8 @@ void MD2::digest(unsigned char* const output, const size_t outlen) {
 	this->pimpl->digest(output, outlen);
 }
 
-void MD2::hexdigest(char* const output, const size_t outlen) {
-	this->pimpl->hexdigest(output, outlen);
+std::string MD2::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }

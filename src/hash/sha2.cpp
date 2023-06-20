@@ -1,6 +1,7 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/sha2.h>
+#include <toycrypto/common/util.h>
 
 #define SHA2_ROR(a, n) ROR((a), (n), sizeof(T) * 8)
 #define SHA2_ROL(a, n) ROL((a), (n), sizeof(T) * 8)
@@ -97,8 +98,6 @@ public:
     void finalize() override;
 
     void digest(unsigned char *output, size_t outlen) override;
-
-    void hexdigest(char *output, size_t outlen) override;
 
 private:
     void m_process_block();
@@ -217,27 +216,6 @@ void SHA2<T>::digest(unsigned char *const output, const size_t outlen) {
 }
 
 template<x32or64 T>
-void SHA2<T>::hexdigest(char *const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (outlen < (m_bits / 4 + 1))
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < (m_bits / (sizeof(T) * 8)); i++) {
-        snprintf(
-            output + (sizeof(T) * 2 * i),
-            (sizeof(T) * 2) + 1,
-            "%.*llx",
-            (unsigned) (sizeof(T) * 2),
-            (uint64_t) m_h.at(i)
-        );
-    }
-}
-
-template<x32or64 T>
 void SHA2<T>::m_process_block() {
     T a = m_h.at(0),
         b = m_h.at(1),
@@ -323,8 +301,10 @@ void SHA224::digest(unsigned char *const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA224::hexdigest(char *const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA224::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA256
@@ -344,8 +324,10 @@ void SHA256::digest(unsigned char *const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA256::hexdigest(char *const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA256::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA384
@@ -365,8 +347,10 @@ void SHA384::digest(unsigned char *const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA384::hexdigest(char *const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA384::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }
 
 // SHA512
@@ -386,6 +370,8 @@ void SHA512::digest(unsigned char *const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void SHA512::hexdigest(char *const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string SHA512::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }

@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <concepts>
+#include <string>
 #include <toycrypto/internal/headerstuff.h>
 
 extern "C++" {
@@ -18,18 +19,23 @@ extern "C++" {
     template<typename T>
     concept x32or64 = std::is_integral<T>::value && (sizeof(T) == 4 || sizeof(T) == 8);
 
-    class HashClass {
+    class HashBase {
     public:
-        TC_API virtual ~HashClass() = 0;
+        TC_API virtual ~HashBase() = 0;
 
         TC_API virtual void reset() = 0;
         TC_API virtual void update(const char* buffer, size_t buflen) = 0;
         TC_API virtual void finalize() = 0;
         TC_API virtual void digest(unsigned char* output, size_t outlen) = 0;
-        TC_API virtual void hexdigest(char* output, size_t outlen) = 0;
     };
 
-    class HashImpl : public HashClass {};
+    class HashImpl : public HashBase {};
+
+    class HashClass : public HashBase {
+    public:
+        TC_API virtual std::string hexdigest() = 0;
+    };
+
 }
 
 #endif

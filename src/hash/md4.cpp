@@ -1,6 +1,7 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/md4.h>
+#include <toycrypto/common/util.h>
 
 #define MD4_ROR(a, n) ROR((a), (n), 32)
 #define MD4_ROL(a, n) ROL((a), (n), 32)
@@ -22,7 +23,6 @@ public:
     void update(const char* const buffer, const size_t buflen) override;
     void finalize() override;
     void digest(unsigned char* const output, const size_t outlen) override;
-    void hexdigest(char* const output, const size_t outlen) override;
 
 private:
 	void m_process_block();
@@ -101,19 +101,6 @@ void MD4Impl::digest(unsigned char* const output, const size_t outlen) {
 
     for (unsigned i = 0; i < 16; i++)
         *(output + i) = MD4_ROR(m_h.at(i / 4), (i % 4) * 8) & 0xff;
-}
-
-void MD4Impl::hexdigest(char* const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_hexdigest_before_finalize();
-
-    if (outlen < 33)
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < 16; i++)
-        snprintf(output + (2ull * i), 3, "%.02x", MD4_ROR(m_h.at(i / 4), (i % 4) * 8) & 0xff);
 }
 
 
@@ -210,6 +197,8 @@ void MD4::digest(unsigned char* const output, const size_t outlen) {
     pimpl->digest(output, outlen);
 }
 
-void MD4::hexdigest(char* const output, const size_t outlen) {
-    pimpl->hexdigest(output, outlen);
+std::string MD4::hexdigest() {
+    unsigned char buffer[digest_size];
+    pimpl->digest(buffer, digest_size);
+    return TC::hexdigest(buffer, digest_size);
 }

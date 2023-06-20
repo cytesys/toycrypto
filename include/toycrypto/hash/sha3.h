@@ -16,7 +16,7 @@ extern "C++" {
 		TC_API void update(const char* buffer, size_t buflen) override;
 		TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
 
         TC_API static const size_t digest_size = 28;
 
@@ -33,7 +33,7 @@ extern "C++" {
         TC_API void update(const char* buffer, size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
 
         TC_API static const size_t digest_size = 32;
 
@@ -50,7 +50,7 @@ extern "C++" {
         TC_API void update(const char* buffer, size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
 
         TC_API static const size_t digest_size = 48;
 
@@ -67,7 +67,7 @@ extern "C++" {
         TC_API void update(const char* buffer, size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
 
         TC_API static const size_t digest_size = 64;
 
@@ -84,7 +84,9 @@ extern "C++" {
         TC_API void update(const char* buffer, size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
+
+        const size_t digest_size;
 
     private:
         std::unique_ptr<HashImpl> pimpl;
@@ -99,7 +101,9 @@ extern "C++" {
         TC_API void update(const char* buffer, size_t buflen) override;
         TC_API void finalize() override;
         TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API void hexdigest(char* output, size_t outlen) override;
+        TC_API std::string hexdigest() override;
+
+        const size_t digest_size;
 
     private:
         std::unique_ptr<HashImpl> pimpl;
