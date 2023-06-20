@@ -1,3 +1,4 @@
+# Fetch and build GTest
 include(FetchContent)
 
 FetchContent_Declare(
@@ -9,16 +10,26 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
-add_executable(foo_test ${CMAKE_CURRENT_SOURCE_DIR}/foo_test.cpp)
+# Add test sources
+add_subdirectory(hash)
+set(TC_TESTS
+    ${TC_HASH_TESTS}
+)
 
-target_link_libraries(foo_test PRIVATE GTest::GTest)
+# Make all the tests
+add_executable(unittests ${CMAKE_CURRENT_SOURCE_DIR}/unittests.cpp ${TC_TESTS})
+target_include_directories(unittests PUBLIC ${TC_HDR_DIR})
+target_link_libraries(unittests PRIVATE GTest::GTest toycrypto::toycrypto)
 
 if (WIN32)
     add_custom_command(
-        TARGET foo_test POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:foo_test> $<TARGET_FILE_DIR:foo_test>
+        TARGET unittests POST_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -E copy_if_different
+            $<TARGET_RUNTIME_DLLS:unittests>
+            $<TARGET_FILE_DIR:unittests>
         COMMAND_EXPAND_LISTS
     )
 endif ()
 
-add_test(foo_gtests foo_test)
+add_test(unittests_gtests unittests)
