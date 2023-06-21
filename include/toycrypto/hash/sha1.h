@@ -4,27 +4,26 @@
 #define TC_SHA1_H
 
 #include <string>
+#include <array>
 
 #include <toycrypto/internal/headerstuff.h>
-#include <toycrypto/hash/hash_common.h>
+#include <toycrypto/internal/hashbase.h>
 
 extern "C++" {
-    class [[deprecated("SHA1 is deprecated. See FIPS 180-5")]] SHA1 final : public HashClass {
-	public:
-		TC_API SHA1();
-		TC_API ~SHA1() override;
+    class [[deprecated("SHA1 is deprecated. See FIPS 180-5")]] SHA1 final
+        : public HBase<uint32_t, 16, true> {
+    public:
+        TC_API SHA1();
+        TC_API ~SHA1 () override;
 
-		TC_API void reset() override;
-		TC_API void update(const char* buffer, size_t buflen) override;
-		TC_API void finalize() override;
-        TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API std::string hexdigest() override;
+        TC_API void finalize() override;
 
-		TC_API static const size_t digest_size = 20;
+    protected:
+        TC_API void init_state() override;
+        TC_API void process_block() override;
 
-	private:
-        std::unique_ptr<HashImpl> pimpl;
-	};
+        std::array<uint32_t, 80> m_words{};
+    };
 }
 
 #endif

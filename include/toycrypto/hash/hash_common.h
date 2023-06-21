@@ -35,7 +35,6 @@ extern "C++" {
     public:
         TC_API virtual std::string hexdigest() = 0;
     };
-
 }
 
 #endif
