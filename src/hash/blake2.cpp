@@ -221,7 +221,7 @@ void Blake2<T>::update(const char *const buffer, const size_t buflen) {
         offset++;
         if ((++m_index % (16 * t)) == 0) {
             m_process_block();
-            m_index %= (16 * t);
+            m_index = 0;
         }
     }
 }
