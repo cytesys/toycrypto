@@ -24,9 +24,9 @@ target_include_directories(toycrypto PUBLIC ${TC_INC_DIR})
 set_target_properties(toycrypto PROPERTIES VERSION ${PROJECT_VERSION})
 
 # The executable try.exe is only used for testing
-add_executable(try ./src/test.cpp)
-target_link_libraries(try PRIVATE toycrypto::toycrypto)
+add_executable(try ./src/test.cpp ./src/common/util.cpp)
 target_include_directories(try PUBLIC ${TC_INC_DIR})
+target_link_libraries(try PRIVATE toycrypto::toycrypto)
 
 # Enable testing
 enable_testing()
