@@ -31,12 +31,18 @@ public:
     virtual ~HBase() = 0;
 
     TC_API virtual void reset() {
+        init_state();
+
+        if (m_digestsize <= 0)
+            throw std::invalid_argument("Digest size must be initialized!");
+
+        if (m_state.size() <= 0)
+            throw std::invalid_argument("The internal state must be initialized!");
+
         m_block.assign(BS, 0);
         m_counter = 0;
         m_length = 0;
         m_phase = HASH_INIT;
-
-        init_state();
     }
 
     TC_API void update(const char* buffer, size_t buflen) {
@@ -100,6 +106,10 @@ public:
         return result;
     }
 
+    TC_API size_t digestsize() {
+        return m_digestsize;
+    }
+
 protected:
     virtual void init_state() = 0;
     virtual void process_block() = 0;
@@ -156,6 +166,16 @@ protected:
 
         m_phase = HASH_FINAL;
         process_block();
+    }
+
+    void set_digestsize(size_t dsize) {
+        if (dsize <= 0)
+            throw std::invalid_argument("Digest size cannot be 0!");
+
+        if (m_digestsize > 0)
+            throw std::invalid_argument("Digest size has already been set");
+
+        m_digestsize = dsize;
     }
 
     std::vector<T> m_block{};

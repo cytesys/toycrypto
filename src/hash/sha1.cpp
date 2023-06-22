@@ -22,7 +22,7 @@ void SHA1::init_state() {
 }
 
 SHA1::SHA1() {
-    m_digestsize = 20;
+    set_digestsize(20);
     reset();
 }
 

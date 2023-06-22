@@ -18,7 +18,7 @@ constexpr std::array<uint32_t, 4> MD4_IV = {
 };
 
 MD4::MD4() {
-    m_digestsize = 16;
+    set_digestsize(16);
     reset();
 }
 

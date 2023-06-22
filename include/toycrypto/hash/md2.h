@@ -16,8 +16,6 @@ extern "C++" {
         TC_API void reset() override;
         TC_API void finalize() override;
 
-        TC_API static const size_t digest_size = 16;
-
     private:
         void init_state() override;
         void process_block() override;

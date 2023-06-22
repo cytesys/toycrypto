@@ -37,7 +37,7 @@ const std::array<uint8_t, 256> SIGMA = {
 };
 
 MD2::MD2() {
-    m_digestsize = 16;
+    set_digestsize(16);
     reset();
 }
 
