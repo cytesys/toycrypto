@@ -76,11 +76,7 @@ void MD2::process_block() {
     uint8_t a;
 
 #if(DEBUG)
-    // Debug
-    for (i = 0; i < m_block.size(); i++) {
-        fprintf(stderr, "%02x", m_block.at(i));
-    }
-    fprintf(stderr, "\n");
+    print_m_block();
 
 #endif
     for (i = 0; i < 16; i++) {
@@ -101,5 +97,5 @@ void MD2::process_block() {
         a += i;
     }
 
-    m_block.assign(m_block.size(), 0);
+    clear_m_block();
 }

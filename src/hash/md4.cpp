@@ -40,12 +40,7 @@ void MD4::process_block() {
         d = m_state.at(3);
 
 #if(DEBUG)
-    // Debug
-    for (unsigned i = 0; i < m_block.size(); i++) {
-        fprintf(stderr, "%08x ", m_block.at(i));
-        if ((i + 1) % 4 == 0) fprintf(stderr, "\n");
-    }
-    fprintf(stderr, "\n");
+    print_m_block();
 
 #endif
     // Round 1
@@ -107,5 +102,5 @@ void MD4::process_block() {
     m_state.at(2) += c;
     m_state.at(3) += d;
 
-    m_block.assign(m_block.size(), 0);
+    clear_m_block();
 }

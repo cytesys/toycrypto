@@ -61,13 +61,7 @@ void MD5::process_block() {
     unsigned i;
 
 #if(DEBUG)
-    // Debug
-    fprintf(stderr, "__ m_block __\n");
-    for (i = 0; i < m_block.size(); i++) {
-        fprintf(stderr, "%08x ", m_block.at(i));
-        if ((i + 1) % 4 == 0) fprintf(stderr, "\n");
-    }
-    fprintf(stderr, "\n");
+    print_m_block();
 
 #endif
     for (i = 0; i < 64; i++) {
@@ -97,5 +91,5 @@ void MD5::process_block() {
     m_state.at(2) += c;
     m_state.at(3) += d;
 
-    m_block.assign(m_block.size(), 0);
+    clear_m_block();
 }
