@@ -9,8 +9,8 @@
 #define H(x, y, z) ((x) ^ (y) ^ (z))
 
 #define FF(a, b, c, d, x, s) (a) = (MD4_ROL((a) + F((b), (c), (d)) + m_block.at(x), (s)))
-#define GG(a, b, c, d, x, s) (a) = (MD4_ROL((a) + G((b), (c), (d)) + m_block.at(x) + 0x5a827999ul, (s)))
-#define HH(a, b, c, d, x, s) (a) = (MD4_ROL((a) + H((b), (c), (d)) + m_block.at(x) + 0x6ed9eba1ul, (s)))
+#define GG(a, b, c, d, x, s) (a) = (MD4_ROL((a) + G((b), (c), (d)) + m_block.at(x) + 0x5a827999u, (s)))
+#define HH(a, b, c, d, x, s) (a) = (MD4_ROL((a) + H((b), (c), (d)) + m_block.at(x) + 0x6ed9eba1u, (s)))
 
 // MD4 initial values
 constexpr std::array<uint32_t, 4> MD4_IV = {

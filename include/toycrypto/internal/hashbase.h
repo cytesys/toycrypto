@@ -185,7 +185,7 @@ protected:
     void print_m_block() {
         fprintf(stderr, "__ m_block __\n");
         for (int i = 0; i < m_block.size(); i++) {
-            fprintf(stderr, "%0*llx ", (int)(sizeof(T) * 2), (uint64_t)(m_block.at(i)));
+            fprintf(stderr, "%0*lx ", (int)(sizeof(T) * 2), (uint64_t)(m_block.at(i)));
             if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
         }
         fprintf(stderr, "\n");
