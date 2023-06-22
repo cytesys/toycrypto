@@ -1,9 +1,9 @@
 #include <iostream>
 
-#include <toycrypto/hash/sha1.h>
+#include <toycrypto/hash/md2.h>
 
 int main(int argc, char** argv) {
-    SHA1 test{};
+    MD2 test{};
 
     test.update("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 69);
     test.finalize();
