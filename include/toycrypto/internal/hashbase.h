@@ -3,10 +3,13 @@
 #ifndef TC_HASHBASE_H
 #define TC_HASHBASE_H
 
+#define __STDC_FORMAT_MACROS
+
 #include <concepts>
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <cinttypes>
 
 #include <toycrypto/internal/headerstuff.h>
 #include <toycrypto/internal/common.h>
@@ -185,7 +188,7 @@ protected:
     void print_m_block() {
         fprintf(stderr, "__ m_block __\n");
         for (int i = 0; i < m_block.size(); i++) {
-            fprintf(stderr, "%0*lx ", (int)(sizeof(T) * 2), (uint64_t)(m_block.at(i)));
+            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_block.at(i)));
             if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
         }
         fprintf(stderr, "\n");
