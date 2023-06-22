@@ -1,7 +1,5 @@
-#include <toycrypto/internal/common.h>
-#include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/md4.h>
-#include <toycrypto/common/util.h>
+#include <toycrypto/internal/common.h>
 
 #define MD4_ROR(a, n) ROR((a), (n), 32)
 #define MD4_ROL(a, n) ROL((a), (n), 32)
