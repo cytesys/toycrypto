@@ -1,5 +1,6 @@
 set(TC_HASH_TESTS
     sha1_test.cpp
+    md2_test.cpp
 )
 
 list(TRANSFORM TC_HASH_TESTS PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/)
