@@ -17,7 +17,7 @@ on:
     paths:
       - '.github/workflows/codeql.yml'
       - '**.cpp'
-      - '**.hpp'
+      - '**.h'
       - '**/CMakeLists.txt'
   pull_request:
     # The branches below must be a subset of the branches above
@@ -25,7 +25,7 @@ on:
     paths:
       - '.github/workflows/codeql.yml'
       - '**.cpp'
-      - '**.hpp'
+      - '**.h'
       - '**/CMakeLists.txt'
 
 jobs:

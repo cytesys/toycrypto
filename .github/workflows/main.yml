@@ -6,14 +6,14 @@ on:
     paths:
       - '.github/workflows/main.yml'
       - '**.cpp'
-      - '**.hpp'
+      - '**.h'
       - '**/CMakeLists.txt'
   pull_request:
     branches: [ main ]
     paths:
       - '.github/workflows/main.yml'
       - '**.cpp'
-      - '**.hpp'
+      - '**.h'
       - '**/CMakeLists.txt'
 
 jobs:
