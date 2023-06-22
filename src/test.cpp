@@ -1,9 +1,9 @@
 #include <iostream>
 
-#include <toycrypto/hash/md2.h>
+#include <toycrypto/hash/md4.h>
 
 int main(int argc, char** argv) {
-    MD2 test{};
+    MD4 test{};
 
     test.update("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", 69);
     test.finalize();

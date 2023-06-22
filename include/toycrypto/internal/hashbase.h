@@ -169,9 +169,9 @@ protected:
 template<HBC T, size_t BS, bool BE>
 HBase<T, BS, BE>::~HBase() {}
 
-template class HBase<uint32_t, 16, true>;
 template class HBase<uint8_t, 16, true>;
-
+template class HBase<uint32_t, 16, true>;
+template class HBase<uint32_t, 16, false>;
 }
 
 #endif
