@@ -1,7 +1,5 @@
 #include <toycrypto/internal/common.h>
-#include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/sha1.h>
-#include <toycrypto/common/util.h>
 
 #define SHA1_ROL(a, n) ROL((a), (n), 32)
 #define SHA1_ROR(a, n) ROR((a), (n), 32)
