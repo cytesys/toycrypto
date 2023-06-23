@@ -3,9 +3,11 @@
 #include <toycrypto/hash/sha3.h>
 #include <toycrypto/common/util.h>
 
-#define LANE(x, y) (((y) * 5) + (x))
-#define SHA3_ROR(a, n) ROR((a), (n), 64)
-#define SHA3_ROL(a, n) ROL((a), (n), 64)
+//#define LANE(x, y) (((y) * 5) + (x))
+//#define SHA3_ROR(a, n) ROR((a), (n), 64)
+//#define SHA3_ROL(a, n) ROL((a), (n), 64)
+
+inline unsigned lane(unsigned x, unsigned y) { return (y * 5) + x; }
 
 constexpr std::array<uint8_t, 25> RO = {
 	 0,  1, 62, 28, 27,
@@ -88,27 +90,27 @@ void Keccak1600::m_keccakf() {
 #endif
     for (i = 0; i < 24; i++) {
 		for (x = 0; x < 5; x++) {
-            m_c.at(x) = m_h.at(LANE(x, 0)) ^
-                      m_h.at(LANE(x, 1)) ^
-                      m_h.at(LANE(x, 2)) ^
-                      m_h.at(LANE(x, 3)) ^
-                      m_h.at(LANE(x, 4));
+            m_c.at(x) = m_h.at(lane(x, 0)) ^
+                      m_h.at(lane(x, 1)) ^
+                      m_h.at(lane(x, 2)) ^
+                      m_h.at(lane(x, 3)) ^
+                      m_h.at(lane(x, 4));
 		}
 
 		for (x = 0; x < 5; x++) {
-            d = m_c.at((x + 4) % 5) ^ SHA3_ROL(m_c.at((x + 1) % 5), 1);
+            d = m_c.at((x + 4) % 5) ^ rol<uint64_t>(m_c.at((x + 1) % 5), 1);
             for (y = 0; y < 5; y++)
-                m_h.at(LANE(x, y)) ^= d;
+                m_h.at(lane(x, y)) ^= d;
 		}
 
 		for (y = 0; y < 5; y++) {
             for (x = 0; x < 5; x++)
-                m_b.at(LANE(y, ((2 * x) + (3 * y)) % 5)) = SHA3_ROL(m_h.at(LANE(x, y)), RO.at(LANE(x, y)));
+                m_b.at(lane(y, ((2 * x) + (3 * y)) % 5)) = rol<uint64_t>(m_h.at(lane(x, y)), RO.at(lane(x, y)));
 		}
 
 		for (y = 0; y < 5; y++) {
 			for (x = 0; x < 5; x++) {
-                m_h.at(LANE(x, y)) = m_b.at(LANE(x, y)) ^ ((~m_b.at(LANE((x + 1) % 5, y))) & m_b.at(LANE((x + 2) % 5, y)));
+                m_h.at(lane(x, y)) = m_b.at(lane(x, y)) ^ ((~m_b.at(lane((x + 1) % 5, y))) & m_b.at(lane((x + 2) % 5, y)));
 			}
 		}
 
@@ -144,7 +146,7 @@ void Keccak1600::update(const char* const buffer, const size_t buflen) {
     m_state = HASH_UPDATE;
 
     while (offset < buflen) {
-        m_h.at(m_index / 8) ^= SHA3_ROL((uint64_t)buffer[offset], (m_index % 8) * 8);
+        m_h.at(m_index / 8) ^= rol_le<uint64_t>(buffer[offset], m_index);
 
         offset++;
         if (++m_index == m_rate) {
@@ -159,7 +161,7 @@ void Keccak1600::finalize() {
         TC::error_finalize_after_finalize();
 
     // Append padding
-    m_h.at(m_index / 8) ^= SHA3_ROL(m_dsuf, (m_index % 8) * 8);
+    m_h.at(m_index / 8) ^= rol_le<uint64_t>(m_dsuf, m_index);
 
     if ((m_dsuf & 0x80) != 0 && (m_index + 1) == m_rate)
         m_keccakf();
@@ -185,7 +187,7 @@ void Keccak1600::digest(unsigned char* const output, const size_t outlen) {
     m_state = HASH_DIGEST;
 
     for (unsigned i = 0; i < m_bytes; i++) {
-        *(output + i) = (uint8_t)SHA3_ROR(m_h.at((i / 8) % (m_rate / 8)), (i % 8) * 8) & 0xff;
+        *(output + i) = (uint8_t)ror_le<uint64_t>(m_h.at((i / 8) % (m_rate / 8)), i) & 0xff;
         if ((i + 1) % m_rate == 0) m_keccakf();
     }
 }

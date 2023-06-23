@@ -19,14 +19,7 @@ public:
 
 protected:
     void init_intermediate();
-    void print_m_v() {
-        fprintf(stderr, "__ m_v __\n");
-        for (int i = 0; i < m_v.size(); i++) {
-            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_v.at(i)));
-            if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
-        }
-        fprintf(stderr, "\n");
-    }
+    void print_v();
 
 private:
     void process_block() override;
@@ -75,6 +68,7 @@ public:
 private:
     void init_state() override;
 };
+
 }
 
 #endif

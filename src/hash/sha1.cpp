@@ -1,9 +1,6 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/hash/sha1.h>
 
-#define SHA1_ROL(a, n) ROL((a), (n), 32)
-#define SHA1_ROR(a, n) ROR((a), (n), 32)
-
 // SHA1 initial values
 constexpr std::array<uint32_t, 5> SHA1_IV = {
     0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0
@@ -48,7 +45,7 @@ void SHA1::process_block() {
         if (i < 16) {
             m_words.at(i) = m_block.at(i);
         } else {
-            m_words.at(i) = SHA1_ROL(
+            m_words.at(i) = rol<uint32_t>(
                 m_words.at((-3ll) + i) ^ m_words.at((-8ll) + i) ^ \
                 m_words.at((-14ll) + i) ^ m_words.at((-16ll) + i),
                 1
@@ -71,10 +68,10 @@ void SHA1::process_block() {
             k = SHA1_K.at(3);
         }
 
-        tmp = SHA1_ROL(a, 5) + f + e + k + m_words.at(i);
+        tmp = rol<uint32_t>(a, 5) + f + e + k + m_words.at(i);
         e = d;
         d = c;
-        c = SHA1_ROL(b, 30);
+        c = rol<uint32_t>(b, 30);
         b = a;
         a = tmp;
     }

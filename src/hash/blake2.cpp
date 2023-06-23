@@ -108,8 +108,6 @@ Blake2<uint64_t>::Blake2(unsigned bitlength)
 
 template<x32or64 T>
 void Blake2<T>::m_G(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, unsigned x, unsigned y) {
-    const unsigned t = sizeof(T) * 8;
-
     T va = m_v.at(a);
     T vb = m_v.at(b);
     T vc = m_v.at(c);
@@ -119,13 +117,13 @@ void Blake2<T>::m_G(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, 
     T yy = m_block.at(SIGMA.at(i % 10).at(y));
 
     va += vb + xx;
-    vd = ROR(vd ^ va, m_rc.at(0), t);
+    vd = ror<T>(vd ^ va, m_rc.at(0));
     vc += vd;
-    vb = ROR(vb ^ vc, m_rc.at(1), t);
+    vb = ror<T>(vb ^ vc, m_rc.at(1));
     va += vb + yy;
-    vd = ROR(vd ^ va, m_rc.at(2), t);
+    vd = ror<T>(vd ^ va, m_rc.at(2));
     vc += vd;
-    vb = ROR(vb ^ vc, m_rc.at(3), t);
+    vb = ror<T>(vb ^ vc, m_rc.at(3));
 
     m_v.at(a) = va;
     m_v.at(b) = vb;
@@ -216,7 +214,7 @@ void Blake2<T>::update(const char *const buffer, const size_t buflen) {
     m_state = HASH_UPDATE;
 
     while (offset < buflen) {
-        m_block.at(m_index / t) |= ROL((T)buffer[offset], (m_index % t) * 8, t * 8);
+        m_block.at(m_index / t) |= rol_le<T>(buffer[offset], m_index);
         m_length++;
         offset++;
         if ((++m_index % (16 * t)) == 0) {
@@ -249,7 +247,7 @@ void Blake2<T>::digest(unsigned char *const output, const size_t outlen) {
     m_state = HASH_DIGEST;
 
     for (unsigned i = 0; i < (m_bits / 8); i++)
-        *(output + i) = ROR(m_h.at(i / t), (i % t) * 8, t * 8) & 0xff;
+        *(output + i) = ror_le<T>(m_h.at(i / t), i) & 0xff;
 }
 
 // BLAKE2S_224

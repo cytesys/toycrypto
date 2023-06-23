@@ -3,9 +3,6 @@
 #include <toycrypto/hash/blake.h>
 #include <toycrypto/common/util.h>
 
-#define BLK_ROR(a, n) ROR((T)(a), (n), sizeof(T) * 8)
-#define BLK_ROL(a, n) ROL((T)(a), (n), sizeof(T) * 8)
-
 // BLAKE initial values
 constexpr std::array<uint32_t, 8> BLAKE224_IV = {
     0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
@@ -93,7 +90,7 @@ void _BlakeImpl<T>::set_salt(const char* const salt, const size_t saltlen) {
     unsigned offset = 0;
 
     while (offset < saltlen) {
-        m_salt.at(offset / sizeof(T)) ^= BLK_ROR((T)(salt[offset]), ((offset + 1) % sizeof(T)) * 8);
+        m_salt.at(offset / sizeof(T)) ^= ror_be<T>(salt[offset], offset);
         offset++;
     }
 }
@@ -109,18 +106,28 @@ inline void _BlakeImpl<T>::blake_g(unsigned r, unsigned a, unsigned b, unsigned 
     unsigned sri1 = BLAKE_SIGMA.at((r % 10) * 16 + i + 1);
 
     va += vb + (this->m_block.at(sri) ^ m_k.at(sri1));
-    vd = BLK_ROR(vd ^ va, m_rc.at(0));
+    vd = ror<T>(vd ^ va, m_rc.at(0));
     vc += vd;
-    vb = BLK_ROR(vb ^ vc, m_rc.at(1));
+    vb = ror<T>(vb ^ vc, m_rc.at(1));
     va += vb + (this->m_block.at(sri1) ^ m_k.at(sri));
-    vd = BLK_ROR(vd ^ va, m_rc.at(2));
+    vd = ror<T>(vd ^ va, m_rc.at(2));
     vc += vd;
-    vb = BLK_ROR(vb ^ vc, m_rc.at(3));
+    vb = ror<T>(vb ^ vc, m_rc.at(3));
 
     m_v.at(a) = va;
     m_v.at(b) = vb;
     m_v.at(c) = vc;
     m_v.at(d) = vd;
+}
+
+template<x32or64 T>
+void _BlakeImpl<T>::print_v() {
+    fprintf(stderr, "__ m_v __\n");
+    for (int i = 0; i < m_v.size(); i++) {
+        fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_v.at(i)));
+        if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
 }
 
 template<x32or64 T>

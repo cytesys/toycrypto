@@ -18,6 +18,10 @@ extern "C++" {
     private:
         void init_state() override;
         void process_block() override;
+
+        inline void md4_ff(uint32_t&, uint32_t, uint32_t, uint32_t, unsigned, unsigned) const;
+        inline void md4_gg(uint32_t&, uint32_t, uint32_t, uint32_t, unsigned, unsigned) const;
+        inline void md4_hh(uint32_t&, uint32_t, uint32_t, uint32_t, unsigned, unsigned) const;
 	};
 }
 

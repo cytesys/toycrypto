@@ -3,10 +3,6 @@
 #include <toycrypto/hash/sha2.h>
 #include <toycrypto/common/util.h>
 
-#define SHA2_ROR(a, n) ROR((a), (n), sizeof(T) * 8)
-#define SHA2_ROL(a, n) ROL((a), (n), sizeof(T) * 8)
-#define SHA2_K_SIZE ((sizeof(T) == 8) ? 80 : 64)
-
 // SHA2 initial values
 constexpr std::array<uint32_t, 8> IV224 = {
     0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
@@ -103,11 +99,11 @@ private:
     void m_process_block();
 
     const std::array<unsigned, 12> &m_rc;
-    const std::array<T, SHA2_K_SIZE> &m_k;
+    const std::array<T, ((sizeof(T) == 8) ? 80 : 64)> &m_k;
     const unsigned m_bits;
 
     std::array<T, 8> m_h{};
-    std::array<T, SHA2_K_SIZE> m_words{};
+    std::array<T, ((sizeof(T) == 8) ? 80 : 64)> m_words{};
     size_t m_length{};
     unsigned m_index{};
     HashState m_state{};
@@ -170,7 +166,7 @@ void SHA2<T>::update(const char *const buffer, const size_t buflen) {
     m_state = HASH_UPDATE;
 
     while (offset < buflen) {
-        m_words.at(m_index / sizeof(T)) ^= SHA2_ROR((T) buffer[offset], ((m_index + 1) % sizeof(T)) * 8);
+        m_words.at(m_index / sizeof(T)) ^= ror_be<T>(buffer[offset], m_index);
 
         offset++;
         if ((++m_index % (16 * sizeof(T))) == 0) {
@@ -186,7 +182,7 @@ void SHA2<T>::finalize() {
         TC::error_finalize_after_finalize();
 
     // Append a padding bit
-    m_words.at(m_index / sizeof(T)) ^= SHA2_ROR((T) 0x80, ((m_index + 1) % sizeof(T)) * 8);
+    m_words.at(m_index / sizeof(T)) ^= ror_be<T>(0x80, m_index);
 
     // Process the block if the message length don't fit
     if (sizeof(T) * 2 + m_index >= 16 * sizeof(T))
@@ -212,7 +208,7 @@ void SHA2<T>::digest(unsigned char *const output, const size_t outlen) {
     m_state = HASH_DIGEST;
 
     for (unsigned i = 0; i < (m_bits / 8); i++)
-        *(output + i) = SHA2_ROL(m_h.at(i / sizeof(T)), ((i + 1) % sizeof(T)) * 8) & 0xff;
+        *(output + i) = rol_be<T>(m_h.at(i / sizeof(T)), i) & 0xff;
 }
 
 template<x32or64 T>
@@ -242,19 +238,19 @@ void SHA2<T>::m_process_block() {
 #endif
     // Expand the 16 first bytes (aka the new block)
     for (i = 16; i < m_k.size(); i++) {
-        s0 = SHA2_ROR(m_words.at((-15ll) + i), m_rc.at(0)) ^
-             SHA2_ROR(m_words.at((-15ll) + i), m_rc.at(1)) ^
+        s0 = ror<T>(m_words.at((-15ll) + i), m_rc.at(0)) ^
+             ror<T>(m_words.at((-15ll) + i), m_rc.at(1)) ^
              (m_words.at((-15ll) + i) >> m_rc.at(2));
-        s1 = SHA2_ROR(m_words.at((-2ll) + i), m_rc.at(3)) ^
-             SHA2_ROR(m_words.at((-2ll) + i), m_rc.at(4)) ^
+        s1 = ror<T>(m_words.at((-2ll) + i), m_rc.at(3)) ^
+             ror<T>(m_words.at((-2ll) + i), m_rc.at(4)) ^
              (m_words.at((-2ll) + i) >> m_rc.at(5));
         m_words.at(i) = m_words.at((-16ll) + i) + s0 + m_words.at((-7ll) + i) + s1;
     }
 
     // Main compression loop
     for (i = 0; i < m_k.size(); i++) {
-        s0 = SHA2_ROR(a, m_rc.at(6)) ^ SHA2_ROR(a, m_rc.at(7)) ^ SHA2_ROR(a, m_rc.at(8));
-        s1 = SHA2_ROR(e, m_rc.at(9)) ^ SHA2_ROR(e, m_rc.at(10)) ^ SHA2_ROR(e, m_rc.at(11));
+        s0 = ror<T>(a, m_rc.at(6)) ^ ror<T>(a, m_rc.at(7)) ^ ror<T>(a, m_rc.at(8));
+        s1 = ror<T>(e, m_rc.at(9)) ^ ror<T>(e, m_rc.at(10)) ^ ror<T>(e, m_rc.at(11));
         ch = (e & f) ^ (~e & g);
         tmp1 = h + s1 + ch + m_k.at(i) + m_words.at(i);
         maj = (a & b) ^ (a & c) ^ (b & c);

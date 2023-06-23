@@ -1,9 +1,6 @@
 #include <toycrypto/internal/common.h>
 #include <toycrypto/hash/md5.h>
 
-#define MD5_ROL(a, n) ROL((a), (n), 32)
-#define MD5_ROR(a, n) ROR((a), (n), 32)
-
 // MD5 initial values
 constexpr std::array<uint32_t, 4> MD5_IV = {
     0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
@@ -83,7 +80,7 @@ void MD5::process_block() {
         a = d;
         d = c;
         c = b;
-        b = b + MD5_ROL(f, MD5_SIGMA.at(i));
+        b = b + rol<uint32_t>(f, MD5_SIGMA.at(i));
     }
 
     m_state.at(0) += a;
