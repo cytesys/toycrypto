@@ -11,11 +11,11 @@ extern "C++" {
 template<x32or64 T>
 class _BlakeImpl : public HBase<T, 16, true> {
 public:
-    TC_API _BlakeImpl() { throw std::invalid_argument("Blake was instanciated with a wrong type"); }
-    TC_API ~_BlakeImpl() override = default;
+    TC_API _BlakeImpl();
+    TC_API ~_BlakeImpl() override;
 
     TC_API void finalize() override;
-    TC_API void set_salt(const char* buffer, size_t buflen);
+    [[maybe_unused]] TC_API void set_salt(const char* buffer, size_t buflen);
 
 protected:
     void init_intermediate();

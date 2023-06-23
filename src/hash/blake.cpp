@@ -59,6 +59,14 @@ const unsigned _BlakeImpl<uint32_t>::m_rounds = 14;
 template<>
 const unsigned _BlakeImpl<uint64_t>::m_rounds = 16;
 
+template<x32or64 T>
+_BlakeImpl<T>::_BlakeImpl() {
+    throw std::invalid_argument("Blake was instanciated with a wrong type");
+}
+
+template<x32or64 T>
+_BlakeImpl<T>::~_BlakeImpl() = default;
+
 template<>
 _BlakeImpl<uint32_t>::_BlakeImpl() {}
 
