@@ -173,6 +173,9 @@ void _BlakeImpl<T>::process_block() {
     this->clear_block();
 }
 
+template class _BlakeImpl<uint32_t>;
+template class _BlakeImpl<uint64_t>;
+
 BLAKE224::BLAKE224() {
     set_digestsize(28);
     reset();
