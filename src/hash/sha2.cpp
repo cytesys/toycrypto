@@ -4,20 +4,20 @@
 #include <toycrypto/common/util.h>
 
 // SHA2 initial values
-constexpr std::array<uint32_t, 8> IV224 = {
+constexpr std::array<uint32_t, 8> SHA224_IV = {
     0xc1059ed8, 0x367cd507, 0x3070dd17, 0xf70e5939, 0xffc00b31, 0x68581511, 0x64f98fa7, 0xbefa4fa4
 };
 
-constexpr std::array<uint32_t, 8> IV256 = {
+constexpr std::array<uint32_t, 8> SHA256_IV = {
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
 };
 
-constexpr std::array<uint64_t, 8> IV384 = {
+constexpr std::array<uint64_t, 8> SHA384_IV = {
     0xcbbb9d5dc1059ed8, 0x629a292a367cd507, 0x9159015a3070dd17, 0x152fecd8f70e5939,
     0x67332667ffc00b31, 0x8eb44a8768581511, 0xdb0c2e0d64f98fa7, 0x47b5481dbefa4fa4
 };
 
-constexpr std::array<uint64_t, 8> IV512 = {
+constexpr std::array<uint64_t, 8> SHA512_IV = {
     0x6a09e667f3bcc908, 0xbb67ae8584caa73b, 0x3c6ef372fe94f82b, 0xa54ff53a5f1d36f1,
     0x510e527fade682d1, 0x9b05688c2b3e6c1f, 0x1f83d9abfb41bd6b, 0x5be0cd19137e2179
 };
@@ -37,7 +37,8 @@ constexpr std::array<uint64_t, 8> IV512 = {
 //};
 
 // SHA2 constants
-constexpr std::array<uint32_t, 64> K32 = {
+template<>
+const std::vector<uint32_t> _Sha2Impl<uint32_t>::m_k = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -48,7 +49,8 @@ constexpr std::array<uint32_t, 64> K32 = {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-constexpr std::array<uint64_t, 80> K64 = {
+template <>
+const std::vector<uint64_t> _Sha2Impl<uint64_t>::m_k = {
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
     0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
     0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
@@ -72,189 +74,81 @@ constexpr std::array<uint64_t, 80> K64 = {
 };
 
 // SHA2 round constants
-constexpr std::array<unsigned, 12> RC32 = {
+template<>
+const std::array<unsigned, 12> _Sha2Impl<uint32_t>::m_rc = {
     7, 18, 3, 17, 19, 10, 2, 13, 22, 6, 11, 25
 };
 
-constexpr std::array<unsigned, 12> RC64 = {
+template<>
+const std::array<unsigned, 12> _Sha2Impl<uint64_t>::m_rc = {
     1, 8, 7, 19, 61, 6, 28, 34, 39, 14, 18, 41
 };
 
 template<x32or64 T>
-class SHA2 final : public HashImpl {
-public:
-    explicit SHA2(unsigned bits);
-
-    ~SHA2() override = default;
-
-    void reset() override;
-
-    void update(const char *buffer, size_t buflen) override;
-
-    void finalize() override;
-
-    void digest(unsigned char *output, size_t outlen) override;
-
-private:
-    void m_process_block();
-
-    const std::array<unsigned, 12> &m_rc;
-    const std::array<T, ((sizeof(T) == 8) ? 80 : 64)> &m_k;
-    const unsigned m_bits;
-
-    std::array<T, 8> m_h{};
-    std::array<T, ((sizeof(T) == 8) ? 80 : 64)> m_words{};
-    size_t m_length{};
-    unsigned m_index{};
-    HashState m_state{};
-};
+_Sha2Impl<T>::_Sha2Impl() {
+    throw std::invalid_argument("Sha2 was instanciated with a wrong type");
+}
 
 template<x32or64 T>
-void SHA2<T>::reset() {
-    m_words.fill(0);
-    m_length = 0;
-    m_index = 0;
-    m_state = HASH_INIT;
-
-    if constexpr (sizeof(T) == 4) {
-        // 32-bit
-        switch (m_bits) {
-            case 224:
-                m_h = IV224;
-                break;
-            case 256:
-                m_h = IV256;
-                break;
-            default:
-                TC::error_invalid_bit_length();
-        }
-    } else {
-        // 64-bit
-        switch (m_bits) {
-        case 384:
-                m_h = IV384;
-                break;
-        case 512:
-                m_h = IV512;
-                break;
-        default:
-                TC::error_invalid_bit_length();
-        }
-    }
-}
+_Sha2Impl<T>::~_Sha2Impl() = default;
 
 template<>
-SHA2<uint32_t>::SHA2(unsigned bits)
-    : m_rc(RC32)
-    , m_k(K32)
-    , m_bits(bits) { reset(); }
+_Sha2Impl<uint32_t>::_Sha2Impl() {}
 
 template<>
-SHA2<uint64_t>::SHA2(unsigned bits)
-    : m_rc(RC64)
-    , m_k(K64)
-    , m_bits(bits) { reset(); }
+_Sha2Impl<uint64_t>::_Sha2Impl() {}
 
 template<x32or64 T>
-void SHA2<T>::update(const char *const buffer, const size_t buflen) {
-    if (m_state > HASH_UPDATE)
-        TC::error_update_after_finalize();
-
-    size_t offset = 0;
-
-    m_length += buflen * 8;
-    m_state = HASH_UPDATE;
-
-    while (offset < buflen) {
-        m_words.at(m_index / sizeof(T)) ^= ror_be<T>(buffer[offset], m_index);
-
-        offset++;
-        if ((++m_index % (16 * sizeof(T))) == 0) {
-            m_process_block();
-            m_index = 0;
-        }
-    }
+void _Sha2Impl<T>::init_intermediate() {
+    m_v.assign(m_k.size(), 0);
 }
 
 template<x32or64 T>
-void SHA2<T>::finalize() {
-    if (m_state >= HASH_FINAL)
-        TC::error_finalize_after_finalize();
-
-    // Append a padding bit
-    m_words.at(m_index / sizeof(T)) ^= ror_be<T>(0x80, m_index);
-
-    // Process the block if the message length don't fit
-    if (sizeof(T) * 2 + m_index >= 16 * sizeof(T))
-        m_process_block();
-
-    // Append the message length
-    m_words.at(15) = (T)m_length;
-    if constexpr (sizeof(T) == 4)
-        m_words.at(14) = (T)(m_length >> 32);
-
-    m_state = HASH_FINAL;
-    m_process_block();
+void _Sha2Impl<T>::finalize() {
+    this->pad_md();
+    this->append_length();
 }
 
 template<x32or64 T>
-void SHA2<T>::digest(unsigned char *const output, const size_t outlen) {
-    if (m_state < HASH_FINAL)
-        TC::error_digest_before_finalize();
-
-    if (outlen < (m_bits / 8))
-        TC::error_invalid_output_length();
-
-    m_state = HASH_DIGEST;
-
-    for (unsigned i = 0; i < (m_bits / 8); i++)
-        *(output + i) = rol_be<T>(m_h.at(i / sizeof(T)), i) & 0xff;
-}
-
-template<x32or64 T>
-void SHA2<T>::m_process_block() {
-    T a = m_h.at(0),
-        b = m_h.at(1),
-        c = m_h.at(2),
-        d = m_h.at(3),
-        e = m_h.at(4),
-        f = m_h.at(5),
-        g = m_h.at(6),
-        h = m_h.at(7),
-        s0, s1, ch, maj,
-        tmp1, tmp2;
+void _Sha2Impl<T>::process_block() {
+    T a = this->m_state.at(0),
+        b = this->m_state.at(1),
+        c = this->m_state.at(2),
+        d = this->m_state.at(3),
+        e = this->m_state.at(4),
+        f = this->m_state.at(5),
+        g = this->m_state.at(6),
+        h = this->m_state.at(7),
+        s0, s1, tmp1, tmp2;
 
     unsigned i;
 
 #if(DEBUG)
-    // Debug
-    fprintf(stderr, "__ m_block __\n");
-    for (i = 0; i < 16; i++) {
-        fprintf(stderr, "%.*llx ", (unsigned) (sizeof(T) * 2), (uint64_t) m_words.at(i));
-        if ((1ull + i) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
-    }
-    fprintf(stderr, "\n");
+    this->print_block();
 
 #endif
-    // Expand the 16 first bytes (aka the new block)
-    for (i = 16; i < m_k.size(); i++) {
-        s0 = ror<T>(m_words.at((-15ll) + i), m_rc.at(0)) ^
-             ror<T>(m_words.at((-15ll) + i), m_rc.at(1)) ^
-             (m_words.at((-15ll) + i) >> m_rc.at(2));
-        s1 = ror<T>(m_words.at((-2ll) + i), m_rc.at(3)) ^
-             ror<T>(m_words.at((-2ll) + i), m_rc.at(4)) ^
-             (m_words.at((-2ll) + i) >> m_rc.at(5));
-        m_words.at(i) = m_words.at((-16ll) + i) + s0 + m_words.at((-7ll) + i) + s1;
+    for (i = 0; i < m_k.size(); i++) {
+        if (i < 16) {
+            // Copy words from block into working array
+            m_v.at(i) = this->m_block.at(i);
+        } else {
+            // Expand the 16 first bytes of the working array
+            s0 = ror<T>(m_v.at((-15ll) + i), m_rc.at(0)) ^
+                 ror<T>(m_v.at((-15ll) + i), m_rc.at(1)) ^
+                 (m_v.at((-15ll) + i) >> m_rc.at(2));
+            s1 = ror<T>(m_v.at((-2ll) + i), m_rc.at(3)) ^
+                 ror<T>(m_v.at((-2ll) + i), m_rc.at(4)) ^
+                 (m_v.at((-2ll) + i) >> m_rc.at(5));
+            m_v.at(i) = m_v.at((-16ll) + i) + s0 + m_v.at((-7ll) + i) + s1;
+        }
     }
 
-    // Main compression loop
+    // Compress
     for (i = 0; i < m_k.size(); i++) {
         s0 = ror<T>(a, m_rc.at(6)) ^ ror<T>(a, m_rc.at(7)) ^ ror<T>(a, m_rc.at(8));
         s1 = ror<T>(e, m_rc.at(9)) ^ ror<T>(e, m_rc.at(10)) ^ ror<T>(e, m_rc.at(11));
-        ch = (e & f) ^ (~e & g);
-        tmp1 = h + s1 + ch + m_k.at(i) + m_words.at(i);
-        maj = (a & b) ^ (a & c) ^ (b & c);
-        tmp2 = s0 + maj;
+        tmp1 = h + s1 + ((e & f) ^ (~e & g)) + m_k.at(i) + m_v.at(i);
+        tmp2 = s0 + ((a & b) ^ (a & c) ^ (b & c));
 
         h = g;
         g = f;
@@ -268,106 +162,350 @@ void SHA2<T>::m_process_block() {
     }
 
     // Add the compressed chunk to the current hash value
-    m_h.at(0) += a;
-    m_h.at(1) += b;
-    m_h.at(2) += c;
-    m_h.at(3) += d;
-    m_h.at(4) += e;
-    m_h.at(5) += f;
-    m_h.at(6) += g;
-    m_h.at(7) += h;
+    this->m_state.at(0) += a;
+    this->m_state.at(1) += b;
+    this->m_state.at(2) += c;
+    this->m_state.at(3) += d;
+    this->m_state.at(4) += e;
+    this->m_state.at(5) += f;
+    this->m_state.at(6) += g;
+    this->m_state.at(7) += h;
 
-    m_words.fill(0);
+    this->clear_block();
 }
 
-// SHA224
-SHA224::SHA224() : pimpl(new SHA2<uint32_t>(224)) {}
+template class _Sha2Impl<uint32_t>;
+template class _Sha2Impl<uint64_t>;
 
-SHA224::~SHA224() = default;
-
-void SHA224::reset() { pimpl->reset();}
-
-void SHA224::update(const char *const buffer, const size_t buflen) {
-    pimpl->update(buffer, buflen);
+SHA224::SHA224() {
+    set_digestsize(28);
+    reset();
 }
 
-void SHA224::finalize() { pimpl->finalize(); }
-
-void SHA224::digest(unsigned char *const output, const size_t outlen) {
-    pimpl->digest(output, outlen);
+void SHA224::init_state() {
+    m_state.assign(SHA224_IV.begin(), SHA224_IV.end());
+    init_intermediate();
 }
 
-std::string SHA224::hexdigest() {
-    unsigned char buffer[digest_size];
-    pimpl->digest(buffer, digest_size);
-    return TC::hexdigest(buffer, digest_size);
+SHA256::SHA256() {
+    set_digestsize(32);
+    reset();
 }
 
-// SHA256
-SHA256::SHA256() : pimpl(new SHA2<uint32_t>(256)) {}
-
-SHA256::~SHA256() = default;
-
-void SHA256::reset() { pimpl->reset(); }
-
-void SHA256::update(const char *const buffer, const size_t buflen) {
-    pimpl->update(buffer, buflen);
+void SHA256::init_state() {
+    m_state.assign(SHA256_IV.begin(), SHA256_IV.end());
+    init_intermediate();
 }
 
-void SHA256::finalize() { pimpl->finalize(); }
-
-void SHA256::digest(unsigned char *const output, const size_t outlen) {
-    pimpl->digest(output, outlen);
+SHA384::SHA384() {
+    set_digestsize(48);
+    reset();
 }
 
-std::string SHA256::hexdigest() {
-    unsigned char buffer[digest_size];
-    pimpl->digest(buffer, digest_size);
-    return TC::hexdigest(buffer, digest_size);
+void SHA384::init_state() {
+    m_state.assign(SHA384_IV.begin(), SHA384_IV.end());
+    init_intermediate();
 }
 
-// SHA384
-SHA384::SHA384() : pimpl(new SHA2<uint64_t>(384)) {}
-
-SHA384::~SHA384() = default;
-
-void SHA384::reset() { pimpl->reset(); }
-
-void SHA384::update(const char *const buffer, const size_t buflen) {
-    pimpl->update(buffer, buflen);
+SHA512::SHA512() {
+    set_digestsize(64);
+    reset();
 }
 
-void SHA384::finalize() { pimpl->finalize(); }
-
-void SHA384::digest(unsigned char *const output, const size_t outlen) {
-    pimpl->digest(output, outlen);
+void SHA512::init_state() {
+    m_state.assign(SHA512_IV.begin(), SHA512_IV.end());
+    init_intermediate();
 }
 
-std::string SHA384::hexdigest() {
-    unsigned char buffer[digest_size];
-    pimpl->digest(buffer, digest_size);
-    return TC::hexdigest(buffer, digest_size);
-}
 
-// SHA512
-SHA512::SHA512() : pimpl(new SHA2<uint64_t>(512)) {}
+//template<x32or64 T>
+//class SHA2 final : public HashImpl {
+//public:
+//    explicit SHA2(unsigned bits);
 
-SHA512::~SHA512() = default;
+//    ~SHA2() override = default;
 
-void SHA512::reset() { pimpl->reset(); }
+//    void reset() override;
 
-void SHA512::update(const char *const buffer, const size_t buflen) {
-    pimpl->update(buffer, buflen);
-}
+//    void update(const char *buffer, size_t buflen) override;
 
-void SHA512::finalize() { pimpl->finalize(); }
+//    void finalize() override;
 
-void SHA512::digest(unsigned char *const output, const size_t outlen) {
-    pimpl->digest(output, outlen);
-}
+//    void digest(unsigned char *output, size_t outlen) override;
 
-std::string SHA512::hexdigest() {
-    unsigned char buffer[digest_size];
-    pimpl->digest(buffer, digest_size);
-    return TC::hexdigest(buffer, digest_size);
-}
+//private:
+//    void m_process_block();
+
+//    const std::array<unsigned, 12> &m_rc;
+//    const std::array<T, ((sizeof(T) == 8) ? 80 : 64)> &m_k;
+//    const unsigned m_bits;
+
+//    std::array<T, 8> m_h{};
+//    std::array<T, ((sizeof(T) == 8) ? 80 : 64)> m_words{};
+//    size_t m_length{};
+//    unsigned m_index{};
+//    HashState m_state{};
+//};
+
+//template<x32or64 T>
+//void SHA2<T>::reset() {
+//    m_words.fill(0);
+//    m_length = 0;
+//    m_index = 0;
+//    m_state = HASH_INIT;
+
+//    if constexpr (sizeof(T) == 4) {
+//        // 32-bit
+//        switch (m_bits) {
+//            case 224:
+//                m_h = IV224;
+//                break;
+//            case 256:
+//                m_h = IV256;
+//                break;
+//            default:
+//                TC::error_invalid_bit_length();
+//        }
+//    } else {
+//        // 64-bit
+//        switch (m_bits) {
+//        case 384:
+//                m_h = IV384;
+//                break;
+//        case 512:
+//                m_h = IV512;
+//                break;
+//        default:
+//                TC::error_invalid_bit_length();
+//        }
+//    }
+//}
+
+//template<>
+//SHA2<uint32_t>::SHA2(unsigned bits)
+//    : m_rc(RC32)
+//    , m_k(K32)
+//    , m_bits(bits) { reset(); }
+
+//template<>
+//SHA2<uint64_t>::SHA2(unsigned bits)
+//    : m_rc(RC64)
+//    , m_k(K64)
+//    , m_bits(bits) { reset(); }
+
+//template<x32or64 T>
+//void SHA2<T>::update(const char *const buffer, const size_t buflen) {
+//    if (m_state > HASH_UPDATE)
+//        TC::error_update_after_finalize();
+
+//    size_t offset = 0;
+
+//    m_length += buflen * 8;
+//    m_state = HASH_UPDATE;
+
+//    while (offset < buflen) {
+//        m_words.at(m_index / sizeof(T)) ^= ror_be<T>(buffer[offset], m_index);
+
+//        offset++;
+//        if ((++m_index % (16 * sizeof(T))) == 0) {
+//            m_process_block();
+//            m_index = 0;
+//        }
+//    }
+//}
+
+//template<x32or64 T>
+//void SHA2<T>::finalize() {
+//    if (m_state >= HASH_FINAL)
+//        TC::error_finalize_after_finalize();
+
+//    // Append a padding bit
+//    m_words.at(m_index / sizeof(T)) ^= ror_be<T>(0x80, m_index);
+
+//    // Process the block if the message length don't fit
+//    if (sizeof(T) * 2 + m_index >= 16 * sizeof(T))
+//        m_process_block();
+
+//    // Append the message length
+//    m_words.at(15) = (T)m_length;
+//    if constexpr (sizeof(T) == 4)
+//        m_words.at(14) = (T)(m_length >> 32);
+
+//    m_state = HASH_FINAL;
+//    m_process_block();
+//}
+
+//template<x32or64 T>
+//void SHA2<T>::digest(unsigned char *const output, const size_t outlen) {
+//    if (m_state < HASH_FINAL)
+//        TC::error_digest_before_finalize();
+
+//    if (outlen < (m_bits / 8))
+//        TC::error_invalid_output_length();
+
+//    m_state = HASH_DIGEST;
+
+//    for (unsigned i = 0; i < (m_bits / 8); i++)
+//        *(output + i) = rol_be<T>(m_h.at(i / sizeof(T)), i) & 0xff;
+//}
+
+//template<x32or64 T>
+//void SHA2<T>::m_process_block() {
+//    T a = m_h.at(0),
+//        b = m_h.at(1),
+//        c = m_h.at(2),
+//        d = m_h.at(3),
+//        e = m_h.at(4),
+//        f = m_h.at(5),
+//        g = m_h.at(6),
+//        h = m_h.at(7),
+//        s0, s1, ch, maj,
+//        tmp1, tmp2;
+
+//    unsigned i;
+
+//#if(DEBUG)
+//    // Debug
+//    fprintf(stderr, "__ m_block __\n");
+//    for (i = 0; i < 16; i++) {
+//        fprintf(stderr, "%.*llx ", (unsigned) (sizeof(T) * 2), (uint64_t) m_words.at(i));
+//        if ((1ull + i) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
+//    }
+//    fprintf(stderr, "\n");
+
+//#endif
+//    // Expand the 16 first bytes (aka the new block)
+//    for (i = 16; i < m_k.size(); i++) {
+//        s0 = ror<T>(m_words.at((-15ll) + i), m_rc.at(0)) ^
+//             ror<T>(m_words.at((-15ll) + i), m_rc.at(1)) ^
+//             (m_words.at((-15ll) + i) >> m_rc.at(2));
+//        s1 = ror<T>(m_words.at((-2ll) + i), m_rc.at(3)) ^
+//             ror<T>(m_words.at((-2ll) + i), m_rc.at(4)) ^
+//             (m_words.at((-2ll) + i) >> m_rc.at(5));
+//        m_words.at(i) = m_words.at((-16ll) + i) + s0 + m_words.at((-7ll) + i) + s1;
+//    }
+
+//    // Main compression loop
+//    for (i = 0; i < m_k.size(); i++) {
+//        s0 = ror<T>(a, m_rc.at(6)) ^ ror<T>(a, m_rc.at(7)) ^ ror<T>(a, m_rc.at(8));
+//        s1 = ror<T>(e, m_rc.at(9)) ^ ror<T>(e, m_rc.at(10)) ^ ror<T>(e, m_rc.at(11));
+//        ch = (e & f) ^ (~e & g);
+//        tmp1 = h + s1 + ch + m_k.at(i) + m_words.at(i);
+//        maj = (a & b) ^ (a & c) ^ (b & c);
+//        tmp2 = s0 + maj;
+
+//        h = g;
+//        g = f;
+//        f = e;
+//        e = d + tmp1;
+//        d = c;
+//        c = b;
+//        b = a;
+//        a = tmp1 + tmp2;
+
+//    }
+
+//    // Add the compressed chunk to the current hash value
+//    m_h.at(0) += a;
+//    m_h.at(1) += b;
+//    m_h.at(2) += c;
+//    m_h.at(3) += d;
+//    m_h.at(4) += e;
+//    m_h.at(5) += f;
+//    m_h.at(6) += g;
+//    m_h.at(7) += h;
+
+//    m_words.fill(0);
+//}
+
+//// SHA224
+//SHA224::SHA224() : pimpl(new SHA2<uint32_t>(224)) {}
+
+//SHA224::~SHA224() = default;
+
+//void SHA224::reset() { pimpl->reset();}
+
+//void SHA224::update(const char *const buffer, const size_t buflen) {
+//    pimpl->update(buffer, buflen);
+//}
+
+//void SHA224::finalize() { pimpl->finalize(); }
+
+//void SHA224::digest(unsigned char *const output, const size_t outlen) {
+//    pimpl->digest(output, outlen);
+//}
+
+//std::string SHA224::hexdigest() {
+//    unsigned char buffer[digest_size];
+//    pimpl->digest(buffer, digest_size);
+//    return TC::hexdigest(buffer, digest_size);
+//}
+
+//// SHA256
+//SHA256::SHA256() : pimpl(new SHA2<uint32_t>(256)) {}
+
+//SHA256::~SHA256() = default;
+
+//void SHA256::reset() { pimpl->reset(); }
+
+//void SHA256::update(const char *const buffer, const size_t buflen) {
+//    pimpl->update(buffer, buflen);
+//}
+
+//void SHA256::finalize() { pimpl->finalize(); }
+
+//void SHA256::digest(unsigned char *const output, const size_t outlen) {
+//    pimpl->digest(output, outlen);
+//}
+
+//std::string SHA256::hexdigest() {
+//    unsigned char buffer[digest_size];
+//    pimpl->digest(buffer, digest_size);
+//    return TC::hexdigest(buffer, digest_size);
+//}
+
+//// SHA384
+//SHA384::SHA384() : pimpl(new SHA2<uint64_t>(384)) {}
+
+//SHA384::~SHA384() = default;
+
+//void SHA384::reset() { pimpl->reset(); }
+
+//void SHA384::update(const char *const buffer, const size_t buflen) {
+//    pimpl->update(buffer, buflen);
+//}
+
+//void SHA384::finalize() { pimpl->finalize(); }
+
+//void SHA384::digest(unsigned char *const output, const size_t outlen) {
+//    pimpl->digest(output, outlen);
+//}
+
+//std::string SHA384::hexdigest() {
+//    unsigned char buffer[digest_size];
+//    pimpl->digest(buffer, digest_size);
+//    return TC::hexdigest(buffer, digest_size);
+//}
+
+//// SHA512
+//SHA512::SHA512() : pimpl(new SHA2<uint64_t>(512)) {}
+
+//SHA512::~SHA512() = default;
+
+//void SHA512::reset() { pimpl->reset(); }
+
+//void SHA512::update(const char *const buffer, const size_t buflen) {
+//    pimpl->update(buffer, buflen);
+//}
+
+//void SHA512::finalize() { pimpl->finalize(); }
+
+//void SHA512::digest(unsigned char *const output, const size_t outlen) {
+//    pimpl->digest(output, outlen);
+//}
+
+//std::string SHA512::hexdigest() {
+//    unsigned char buffer[digest_size];
+//    pimpl->digest(buffer, digest_size);
+//    return TC::hexdigest(buffer, digest_size);
+//}
