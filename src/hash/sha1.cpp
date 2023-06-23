@@ -14,17 +14,16 @@ constexpr std::array<uint32_t, 4> SHA1_K = {
     0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6
 };
 
-void SHA1::init_state() {
-    m_state.assign(5, 0);
-    std::copy(SHA1_IV.begin(), SHA1_IV.end(), m_state.begin());
-}
-
 SHA1::SHA1() {
     set_digestsize(20);
     reset();
 }
 
 SHA1::~SHA1() = default;
+
+void SHA1::init_state() {
+    m_state.assign(SHA1_IV.begin(), SHA1_IV.end());
+}
 
 void SHA1::finalize() {
     pad_md();
@@ -42,7 +41,7 @@ void SHA1::process_block() {
     unsigned i;
 
 #if(DEBUG)
-    print_m_block();
+    print_block();
 
 #endif
     for (i = 0; i < 80; i++) {
@@ -50,12 +49,10 @@ void SHA1::process_block() {
             m_words.at(i) = m_block.at(i);
         } else {
             m_words.at(i) = SHA1_ROL(
-                m_words.at((-3ll) + i) ^ \
-                                         m_words.at((-8ll) + i) ^ \
-                      m_words.at((-14ll) + i) ^ \
-                      m_words.at((-16ll) + i),
+                m_words.at((-3ll) + i) ^ m_words.at((-8ll) + i) ^ \
+                m_words.at((-14ll) + i) ^ m_words.at((-16ll) + i),
                 1
-                );
+            );
         }
     }
 
@@ -89,5 +86,5 @@ void SHA1::process_block() {
     m_state.at(4) += e;
 
     m_words.fill(0);
-    clear_m_block();
+    clear_block();
 }

@@ -12,12 +12,13 @@ extern "C++" {
     enum HashState {
         HASH_INIT,
         HASH_UPDATE,
+        HASH_LAST,
         HASH_FINAL,
         HASH_DIGEST
     };
 
     template<typename T>
-    concept x32or64 = std::is_integral<T>::value && (sizeof(T) == 4 || sizeof(T) == 8);
+    concept x32or64 = std::is_integral<T>::value && (sizeof(T) == 4 || sizeof(T) == 8) && std::is_unsigned<T>::value;
 
     class HashBase {
     public:

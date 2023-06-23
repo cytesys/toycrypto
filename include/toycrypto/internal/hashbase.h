@@ -26,7 +26,7 @@
 
 extern "C++" {
 template<typename T>
-concept HBC = std::is_integral<T>::value;
+concept HBC = std::is_integral<T>::value && std::is_unsigned<T>::value;
 
 template<HBC T, size_t BS, bool BE>
 class HBase {
@@ -36,42 +36,43 @@ public:
     TC_API virtual void reset() {
         init_state();
 
-        if (m_digestsize <= 0)
+        if (get_digestsize() <= 0)
             throw std::invalid_argument("Digest size must be initialized!");
 
-        if (m_state.size() <= 0)
+        if (get_statesize() <= 0)
             throw std::invalid_argument("The internal state must be initialized!");
 
-        m_block.assign(BS, 0);
-        m_counter = 0;
-        m_length = 0;
-        m_phase = HASH_INIT;
+        assign_block();
+        clear_counter();
+        clear_length();
+        set_phase(HASH_INIT);
     }
 
-    TC_API void update(const char* buffer, size_t buflen) {
-        if (m_phase > HASH_UPDATE)
+    TC_API void update(const char* _buffer, size_t buflen) {
+        size_t offset = 0;
+        const unsigned char* buffer = reinterpret_cast<const unsigned char*>(_buffer);
+
+        if (get_phase() > HASH_UPDATE)
             throw std::invalid_argument("Cannot update after final block");
 
-        m_phase = HASH_UPDATE;
-
-        size_t offset = 0;
+        set_phase(HASH_UPDATE);
 
         // Copy bytes from buffer into m_block and process it if it's is full.
         while (offset < buflen) {
             if constexpr (BE) {
                 // Big endian
-                m_block.at(m_counter / sizeof(T)) ^= H_ROR_BE((T)(buffer[offset]), m_counter);
+                m_block.at(get_index()) |= H_ROR_BE((T)(buffer[offset]), get_counter());
             } else {
                 // Little endian
-                m_block.at(m_counter / sizeof(T)) ^= H_ROL_LE((T)(buffer[offset]), m_counter);
+                m_block.at(get_index()) |= H_ROL_LE((T)(buffer[offset]), get_counter());
             }
 
             offset++;
-            m_length++;
-            if ((++m_counter % (BS * sizeof(T))) == 0) {
-                m_counter += BS;
+            inc_length();
+            inc_counter();
+            if (get_counter() % get_blocksize_bytes() == 0) {
                 process_block();
-                m_counter = 0;
+                clear_counter();
             }
         }
     }
@@ -79,16 +80,18 @@ public:
     virtual void finalize() = 0;
 
     TC_API void digest(unsigned char* output, size_t outlen) {
-        if (m_phase < HASH_FINAL)
+        unsigned i;
+
+        if (get_phase() < HASH_FINAL)
             throw std::invalid_argument("Cannot digest before final block");
 
-        if (outlen < m_digestsize)
-            throw std::invalid_argument("Output buffer size is too small");
+        if (outlen < get_digestsize())
+            throw std::invalid_argument("The output buffer size is too small");
 
-        m_phase = HASH_DIGEST;
+        set_phase(HASH_DIGEST);
 
         // Copy every byte fro m_state to output
-        for (unsigned i = 0; i < m_digestsize; i++) {
+        for (i = 0; i < get_digestsize(); i++) {
             if constexpr (BE) {
                 // Big endian
                 *(output + i) = H_ROL_BE(m_state.at(i / sizeof(T)), i) & 0xff;
@@ -100,16 +103,18 @@ public:
     }
 
     TC_API std::string hexdigest() {
+        std::string result{};
+
         unsigned char* buffer = reinterpret_cast<unsigned char*>(
-            calloc(m_digestsize, sizeof(unsigned char))
-            );
-        digest(buffer, m_digestsize);
-        std::string result = TC::hexdigest(buffer, m_digestsize);
+            calloc(get_digestsize(), sizeof(unsigned char))
+        );
+        digest(buffer, get_digestsize());
+        result = TC::hexdigest(buffer, get_digestsize());
         free(buffer);
         return result;
     }
 
-    TC_API size_t digestsize() {
+    TC_API inline size_t get_digestsize() {
         return m_digestsize;
     }
 
@@ -118,16 +123,26 @@ protected:
     virtual void process_block() = 0;
 
     void pad_md() {
-        if (m_phase >= HASH_FINAL)
+        if (get_phase() >= HASH_FINAL)
             throw std::invalid_argument("Cannot pad after final block");
+
+        if (get_length() > 0 && get_counter() == 0) {
+            set_phase(HASH_LAST);
+        }
 
         // Append a padding bit
         if constexpr (BE) {
             // Big endian
-            m_block.at(m_counter / sizeof(T)) ^= H_ROR_BE((T)0x80, m_counter);
+            m_block.at(get_index()) |= H_ROR_BE((T)0x80u, get_counter());
         } else {
             // Little endian
-            m_block.at(m_counter / sizeof(T)) ^= H_ROL_LE((T)0x80, m_counter);
+            m_block.at(get_index()) |= H_ROL_LE((T)0x80u, get_counter());
+        }
+
+        if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
+            process_block();
+            clear_counter();
+            set_phase(HASH_LAST);
         }
     }
 
@@ -136,13 +151,20 @@ protected:
         message byte. */
         pad_md();
 
+        if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
+            process_block();
+            clear_counter();
+        }
+
         /* Padding in HAIFA construction (I think) also appends a bit
         right before the message length. */
-        m_block.at(BS - 3) ^= 1; // See note below
+        m_block.at(BS - 3) |= 1; // See note below
     }
 
     void append_length() {
-        if (m_phase >= HASH_FINAL)
+        size_t length = get_length_bits();
+
+        if (get_phase() >= HASH_FINAL)
             throw std::invalid_argument("Cannot append length after final block");
 
         /* NOTE: Every hash function that I've seen that appends a message length
@@ -150,52 +172,94 @@ protected:
         length is effectively put in the last two block "segments" of m_block. */
 
         // Process the block if the message length don't fit.
-        if (m_counter >= BS * sizeof(T) - (sizeof(T) * 2))
+        if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
             process_block();
-
-        // Append the length in bits
-        m_length *= 8;
-
-        // Append the message length
-        if constexpr (BE) {
-            m_block.at(BS - 1) = (T)m_length;
-            if constexpr (sizeof(T) == 4) // See the note above
-                m_block.at(BS - 2) = (T)(m_length >> 32);
-        } else {
-            m_block.at(BS - 2) = (T)m_length;
-            if constexpr (sizeof(T) == 4) // See the note above
-                m_block.at(BS - 1) = (T)(m_length >> 32);
+            clear_counter();
         }
 
-        m_phase = HASH_FINAL;
+        // Append the message length in bits
+        if constexpr (BE) {
+            m_block.at(BS - 1) = (T)length;
+            if constexpr (sizeof(T) == 4) // See the note above
+                m_block.at(BS - 2) = (T)(length >> 32);
+        } else {
+            m_block.at(BS - 2) = (T)length;
+            if constexpr (sizeof(T) == 4) // See the note above
+                m_block.at(BS - 1) = (T)(length >> 32);
+        }
+
         process_block();
+        set_phase(HASH_FINAL);
     }
 
     void set_digestsize(size_t dsize) {
         if (dsize <= 0)
             throw std::invalid_argument("Digest size cannot be 0!");
 
-        if (m_digestsize > 0)
+        if (get_digestsize() > 0)
             throw std::invalid_argument("Digest size has already been set");
 
         m_digestsize = dsize;
     }
 
-    void clear_m_block() {
-        m_block.assign(m_block.size(), 0);
-    }
-
-    void print_m_block() {
+    void print_block() {
         fprintf(stderr, "__ m_block __\n");
-        for (int i = 0; i < m_block.size(); i++) {
-            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_block.at(i)));
+        for (int i = 0; i < get_blocksize(); i++) {
+            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(m_block.at(i)));
             if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
         }
         fprintf(stderr, "\n");
     }
 
+    void print_state() {
+        fprintf(stderr, "__ m_state __\n");
+        for (int i = 0; i < get_statesize(); i++) {
+            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(m_state.at(i)));
+            if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "\n");
+    }
+
+    inline void assign_block() { m_block.assign(BS, 0); }
+
+    inline void clear_block() { std::for_each(m_block.begin(), m_block.end(), [](T &b) {b ^= b;}); }
+
+    inline void clear_length() { m_length ^= m_length; }
+
+    inline void inc_length() { m_length++; }
+
+    inline void inc_length(size_t len) { m_length += len; }
+
+    inline void clear_counter() { m_counter ^= m_counter; }
+
+    inline void inc_counter() { m_counter++; }
+
+    inline void inc_counter(size_t len) { m_counter += len; }
+
+    inline size_t get_length() { return m_length; }
+
+    inline size_t get_length_bits() { return m_length << 3; }
+
+    inline size_t get_counter() { return m_counter; }
+
+    inline size_t get_index() { return m_counter / sizeof(T); }
+
+    inline HashState get_phase() { return m_phase; }
+
+    inline void set_phase(HashState phase) { m_phase = phase; }
+
+    inline size_t get_blocksize() { return m_block.size(); }
+
+    inline size_t get_blocksize_bytes() { return m_block.size() * sizeof(T); }
+
+    inline size_t get_blocksize_bits() { return get_blocksize_bytes() << 3; }
+
+    inline size_t get_statesize() { return m_state.size(); }
+
     std::vector<T> m_block{};
     std::vector<T> m_state{};
+
+private:
     size_t m_counter{};
     size_t m_length{};
     size_t m_digestsize{};
@@ -208,6 +272,8 @@ HBase<T, BS, BE>::~HBase() {}
 template class HBase<uint8_t, 16, true>;
 template class HBase<uint32_t, 16, true>;
 template class HBase<uint32_t, 16, false>;
+template class HBase<uint64_t, 16, true>;
+template class HBase<uint64_t, 16, false>;
 }
 
 #endif

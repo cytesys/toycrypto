@@ -4,76 +4,77 @@
 #define TC_BLAKE_H
 
 #include <toycrypto/internal/headerstuff.h>
-#include <toycrypto/hash/hash_common.h>
+#include <toycrypto/internal/hashbase.h>
 
 extern "C++" {
-    class BLAKE224 final : public HashClass {
-	public:
-		TC_API BLAKE224();
-		TC_API ~BLAKE224() override;
 
-		TC_API void reset() override;
-		TC_API void update(const char* buffer, size_t buflen) override;
-		TC_API void finalize() override;
-        TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API std::string hexdigest() override;
+template<x32or64 T>
+class _BlakeImpl : public HBase<T, 16, true> {
+public:
+    TC_API _BlakeImpl() { throw std::invalid_argument("Blake was instanciated with a wrong type"); }
+    TC_API ~_BlakeImpl() override = default;
 
-		TC_API static const size_t digest_size = 28;
+    TC_API void finalize() override;
+    TC_API void set_salt(const char* buffer, size_t buflen);
 
-    private:
-        std::unique_ptr<HashImpl> pimpl;
-	};
+protected:
+    void init_intermediate();
+    void print_m_v() {
+        fprintf(stderr, "__ m_v __\n");
+        for (int i = 0; i < m_v.size(); i++) {
+            fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_v.at(i)));
+            if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "\n");
+    }
 
-    class BLAKE256 final : public HashClass {
-    public:
-        TC_API BLAKE256();
-        TC_API ~BLAKE256() override;
+private:
+    void process_block() override;
+    inline void blake_g(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
 
-        TC_API void reset() override;
-        TC_API void update(const char* buffer, size_t buflen) override;
-        TC_API void finalize() override;
-        TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API std::string hexdigest() override;
+    std::array<T, 16> m_v{}; // Working array
+    std::array<T, 4> m_salt{};
 
-        TC_API static const size_t digest_size = 32;
+    static const unsigned m_rounds;
+    static const std::array<T, 16> m_k;
+    static const std::array<unsigned, 4> m_rc;
+};
 
-    private:
-        std::unique_ptr<HashImpl> pimpl;
-    };
+class BLAKE224 final : public _BlakeImpl<uint32_t>
+{
+public:
+    TC_API BLAKE224();
 
-    class BLAKE384 final : public HashClass {
-    public:
-        TC_API BLAKE384();
-        TC_API ~BLAKE384() override;
+private:
+    void init_state() override;
+};
 
-        TC_API void reset() override;
-        TC_API void update(const char* buffer, size_t buflen) override;
-        TC_API void finalize() override;
-        TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API std::string hexdigest() override;
+class BLAKE256 final : public _BlakeImpl<uint32_t>
+{
+public:
+    TC_API BLAKE256();
 
-        TC_API static const size_t digest_size = 48;
+private:
+    void init_state() override;
+};
 
-    private:
-        std::unique_ptr<HashImpl> pimpl;
-    };
+class BLAKE384 final : public _BlakeImpl<uint64_t>
+{
+public:
+    TC_API BLAKE384();
 
-    class BLAKE512 final : public HashClass {
-    public:
-        TC_API BLAKE512();
-        TC_API ~BLAKE512() override;
+private:
+    void init_state() override;
+};
 
-        TC_API void reset() override;
-        TC_API void update(const char* buffer, size_t buflen) override;
-        TC_API void finalize() override;
-        TC_API void digest(unsigned char* output, size_t outlen) override;
-        TC_API std::string hexdigest() override;
+class BLAKE512 final : public _BlakeImpl<uint64_t>
+{
+public:
+    TC_API BLAKE512();
 
-        TC_API static const size_t digest_size = 64;
-
-    private:
-        std::unique_ptr<HashImpl> pimpl;
-    };
+private:
+    void init_state() override;
+};
 }
 
 #endif

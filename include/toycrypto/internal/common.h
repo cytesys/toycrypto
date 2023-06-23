@@ -11,7 +11,7 @@
 #include <memory>
 #include <concepts>
 
-#define ROL(a, n, bits) (((a) << ((n) % (bits))) | ((a) >> ((bits) - ((n) % (bits)))))
-#define ROR(a, n, bits) (((a) << ((bits) - ((n) % (bits)))) | ((a) >> ((n) % (bits))))
+#define ROL(a, n, bits) (((a) << ((n) % (bits))) | ((a) >> (((bits) - (n)) % (bits))))
+#define ROR(a, n, bits) (((a) << (((bits) - (n)) % (bits))) | ((a) >> ((n) % (bits))))
 
 #endif

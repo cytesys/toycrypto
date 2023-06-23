@@ -1,8 +1,13 @@
 set(TC_HASH_TESTS
-    sha1_test.cpp
+    blake224_test.cpp
+    blake256_test.cpp
+    blake384_test.cpp
+    blake512_test.cpp
     md2_test.cpp
     md4_test.cpp
     md5_test.cpp
+    rotate_test.cpp
+    sha1_test.cpp
 )
 
 list(TRANSFORM TC_HASH_TESTS PREPEND ${CMAKE_CURRENT_SOURCE_DIR}/)

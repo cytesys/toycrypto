@@ -5,12 +5,12 @@
 #define MD5_ROR(a, n) ROR((a), (n), 32)
 
 // MD5 initial values
-const std::array<uint32_t, 4> MD5_IV = {
+constexpr std::array<uint32_t, 4> MD5_IV = {
     0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
 };
 
 // MD5 constants
-const std::array<uint32_t, 64> MD5_K = {
+constexpr std::array<uint32_t, 64> MD5_K = {
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
     0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
     0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -29,7 +29,7 @@ const std::array<uint32_t, 64> MD5_K = {
     0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
 };
 
-const std::array<uint8_t, 64> MD5_SIGMA = {
+constexpr std::array<uint8_t, 64> MD5_SIGMA = {
     7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,  7, 12, 17, 22,
     5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,  5,  9, 14, 20,
     4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,  4, 11, 16, 23,
@@ -61,7 +61,7 @@ void MD5::process_block() {
     unsigned i;
 
 #if(DEBUG)
-    print_m_block();
+    print_block();
 
 #endif
     for (i = 0; i < 64; i++) {
@@ -91,5 +91,5 @@ void MD5::process_block() {
     m_state.at(2) += c;
     m_state.at(3) += d;
 
-    clear_m_block();
+    clear_block();
 }

@@ -40,7 +40,7 @@ void MD4::process_block() {
         d = m_state.at(3);
 
 #if(DEBUG)
-    print_m_block();
+    print_block();
 
 #endif
     // Round 1
@@ -102,5 +102,5 @@ void MD4::process_block() {
     m_state.at(2) += c;
     m_state.at(3) += d;
 
-    clear_m_block();
+    clear_block();
 }

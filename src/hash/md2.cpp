@@ -1,7 +1,7 @@
 #include <toycrypto/hash/md2.h>
 #include <toycrypto/hash/hash_common.h>
 
-const std::array<uint8_t, 256> SIGMA = {
+constexpr std::array<uint8_t, 256> MD2_SIGMA = {
     0x29, 0x2E, 0x43, 0xC9, 0xA2, 0xD8, 0x7C, 0x01,
     0x3D, 0x36, 0x54, 0xA1, 0xEC, 0xF0, 0x06, 0x13,
     0x62, 0xA7, 0x05, 0xF3, 0xC0, 0xC7, 0x73, 0x8C,
@@ -55,20 +55,22 @@ void MD2::reset() {
 }
 
 void MD2::finalize() {
-    if (m_phase >= HASH_FINAL)
+    int i;
+
+    if (get_phase() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
     // Append PKCS#7 padding
-    uint8_t pad = (16 - m_counter) & 0xff;
-    for (int i = m_counter; i < 16; i++)
+    uint8_t pad = (16 - get_counter()) & 0xff;
+    for (i = get_counter(); i < 16; i++)
         m_block.at(i) = pad;
     process_block();
 
-    // Append checksum
+    // Process the checksum as well
     m_block.assign(m_c.begin(), m_c.end());
     process_block();
 
-    m_phase = HASH_FINAL;
+    set_phase(HASH_FINAL);
 }
 
 void MD2::process_block() {
@@ -76,12 +78,12 @@ void MD2::process_block() {
     uint8_t a;
 
 #if(DEBUG)
-    print_m_block();
+    print_block();
 
 #endif
     for (i = 0; i < 16; i++) {
         a = m_block.at(i);
-        m_c.at(i) ^= SIGMA.at(a ^ m_l);
+        m_c.at(i) ^= MD2_SIGMA.at(a ^ m_l);
         m_l = m_c.at(i);
 
         m_state.at(16ull + i) = a;
@@ -91,11 +93,11 @@ void MD2::process_block() {
     a = 0;
     for (i = 0; i < 18; i++) {
         for (j = 0; j < 48; j++) {
-            a = m_state.at(j) ^ SIGMA.at(a);
+            a = m_state.at(j) ^ MD2_SIGMA.at(a);
             m_state.at(j) = a;
         }
         a += i;
     }
 
-    clear_m_block();
+    clear_block();
 }
