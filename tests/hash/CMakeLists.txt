@@ -6,7 +6,6 @@ set(TC_HASH_TESTS
     md2_test.cpp
     md4_test.cpp
     md5_test.cpp
-    rotate_test.cpp
     sha1_test.cpp
     sha224_test.cpp
     sha256_test.cpp

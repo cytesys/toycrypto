@@ -12,7 +12,10 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main)
 
 # Add test sources
 add_subdirectory(hash)
+add_subdirectory(common)
+
 set(TC_TESTS
+    ${TC_COMMON_TESTS}
     ${TC_HASH_TESTS}
 )
 
