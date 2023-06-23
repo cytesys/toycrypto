@@ -3,6 +3,8 @@ set(TC_HASH_TESTS
     blake256_test.cpp
     blake384_test.cpp
     blake512_test.cpp
+    blake2s_test.cpp
+    blake2b_test.cpp
     md2_test.cpp
     md4_test.cpp
     md5_test.cpp
