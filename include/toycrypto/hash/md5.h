@@ -7,18 +7,20 @@
 #include <toycrypto/internal/hashbase.h>
 
 extern "C++" {
-    class [[deprecated("MD5 is deprecated. See RFC 6151")]] MD5 final
-        : public HBase<uint32_t, 16, false> {
-	public:
-		TC_API MD5();
-        TC_API ~MD5() override;
 
-        TC_API void finalize() override;
+class [[deprecated("MD5 is deprecated. See RFC 6151")]] MD5 final
+    : public HBase<uint32_t, 16, false> {
+public:
+    TC_API MD5();
+    TC_API ~MD5() override;
 
-    private:
-        void init_state() override;
-        void process_block() override;
-	};
+    TC_API void finalize() override;
+
+private:
+    void init_state() override;
+    void process_block() override;
+};
+
 }
 
 #endif

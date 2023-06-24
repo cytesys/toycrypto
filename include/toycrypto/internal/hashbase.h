@@ -47,17 +47,15 @@ protected:
 
     void print_state() const;
 
-    inline void assign_block() { m_block.assign(BS, 0); }
+    inline void clear_block() { m_block.assign(BS, 0); }
 
-    inline void clear_block() { std::for_each(m_block.begin(), m_block.end(), [](T &b) {b ^= b;}); }
-
-    inline void clear_length() { m_length ^= m_length; }
+    inline void clear_length() { m_length = 0; }
 
     inline void inc_length() { m_length++; }
 
     inline void inc_length(size_t len) { m_length += len; }
 
-    inline void clear_counter() { m_counter ^= m_counter; }
+    inline void clear_counter() { m_counter = 0; }
 
     inline void inc_counter() { m_counter++; }
 

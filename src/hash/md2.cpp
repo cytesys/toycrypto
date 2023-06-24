@@ -60,6 +60,12 @@ void MD2::finalize() {
     if (get_phase() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
+    if (get_counter() == get_blocksize_bytes()) {
+        set_phase(HASH_LAST);
+        process_block();
+        clear_counter();
+    }
+
     // Append PKCS#7 padding
     uint8_t pad = (16 - get_counter()) & 0xff;
     for (i = get_counter(); i < 16; i++)

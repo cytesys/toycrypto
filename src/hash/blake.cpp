@@ -154,7 +154,7 @@ void _BlakeImpl<T>::process_block() {
             m_v.at(i + 8) ^= m_salt.at(i % m_salt.size());
     }
 
-    // Append the message length in bits unless the current block only consists of padding.
+    // XOR in the message length in bits unless the current block only consists of padding.
     if (this->get_phase() != HASH_LAST) {
         if constexpr (std::is_same<T, uint32_t>::value) {
             // 32-bit

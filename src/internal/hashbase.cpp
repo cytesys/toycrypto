@@ -13,7 +13,7 @@ void HBase<T, BS, BE>::reset() {
     if (get_statesize() <= 0)
         throw std::invalid_argument("The internal state must be initialized!");
 
-    assign_block();
+    clear_block();
     clear_counter();
     clear_length();
     set_phase(HASH_INIT);
@@ -31,6 +31,11 @@ void HBase<T, BS, BE>::update(const char* const _buffer, const size_t buflen) {
 
     // Copy bytes from buffer into m_block and process it if it's is full.
     while (offset < buflen) {
+        if (get_counter() % get_blocksize_bytes() == 0 && get_length() > 0) {
+            process_block();
+            clear_counter();
+        }
+
         if constexpr (BE) {
             // Big endian
             m_block.at(get_index()) |= ror_be<T>(buffer[offset], get_counter());
@@ -42,10 +47,6 @@ void HBase<T, BS, BE>::update(const char* const _buffer, const size_t buflen) {
         offset++;
         inc_length();
         inc_counter();
-        if (get_counter() % get_blocksize_bytes() == 0) {
-            process_block();
-            clear_counter();
-        }
     }
 }
 
@@ -91,7 +92,9 @@ void HBase<T, BS, BE>::pad_md() {
     if (get_phase() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
-    if (get_length() > 0 && get_counter() == 0) {
+    if (get_length() > 0 && get_counter() == get_blocksize_bytes()) {
+        process_block();
+        clear_counter();
         set_phase(HASH_LAST);
     }
 
@@ -104,11 +107,7 @@ void HBase<T, BS, BE>::pad_md() {
         m_block.at(get_index()) |= rol_le<T>(0x80u, get_counter());
     }
 
-    if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
-        process_block();
-        clear_counter();
-        set_phase(HASH_LAST);
-    }
+    inc_counter();
 }
 
 template<HBC T, size_t BS, bool BE>
@@ -117,7 +116,7 @@ void HBase<T, BS, BE>::pad_haifa() {
         message byte. */
     pad_md();
 
-    if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
+    if (get_counter() + (sizeof(T) << 1) > get_blocksize_bytes()) {
         process_block();
         clear_counter();
     }
@@ -139,10 +138,13 @@ void HBase<T, BS, BE>::append_length() {
         length is effectively put in the last two block "segments" of m_block. */
 
     // Process the block if the message length don't fit.
-    if (get_counter() + (sizeof(T) << 1) >= get_blocksize_bytes()) {
+    if (get_counter() + (sizeof(T) << 1) > get_blocksize_bytes()) {
         process_block();
         clear_counter();
     }
+
+    if (get_counter() < 2)
+        set_phase(HASH_LAST);
 
     // Append the message length in bits
     if constexpr (BE) {
