@@ -10,9 +10,11 @@ void HBase<T, BS, BE>::reset() {
     if (get_digestsize() <= 0)
         throw std::invalid_argument("Digest size must be initialized!");
 
-    if (get_statesize() <= 0)
+    if (m_state.size() <= 0)
         throw std::invalid_argument("The internal state must be initialized!");
 
+    if (m_rate == 0)
+        set_rate(BS * sizeof(T));
     clear_block();
     clear_counter();
     clear_length();
@@ -71,6 +73,9 @@ void HBase<T, BS, BE>::digest(unsigned char* const output, const size_t outlen) 
             // Little endian
             *(output + i) = ror_le<T>(m_state.at(i / sizeof(T)), i) & 0xff;
         }
+
+        if ((i + 1) % get_blocksize_bytes() == 0)
+            process_block();
     }
 }
 
@@ -88,7 +93,7 @@ std::string HBase<T, BS, BE>::hexdigest() {
 }
 
 template<HBC T, size_t BS, bool BE>
-void HBase<T, BS, BE>::pad_md() {
+void HBase<T, BS, BE>::pad_md(uint8_t byte) {
     if (get_phase() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
@@ -101,13 +106,18 @@ void HBase<T, BS, BE>::pad_md() {
     // Append a padding bit
     if constexpr (BE) {
         // Big endian
-        m_block.at(get_index()) |= ror_be<T>(0x80u, get_counter());
+        m_block.at(get_index()) |= ror_be<T>(byte, get_counter());
     } else {
         // Little endian
-        m_block.at(get_index()) |= rol_le<T>(0x80u, get_counter());
+        m_block.at(get_index()) |= rol_le<T>(byte, get_counter());
     }
 
     inc_counter();
+}
+
+template<HBC T, size_t BS, bool BE>
+void HBase<T, BS, BE>::pad_md() {
+    pad_md(0x80);
 }
 
 template<HBC T, size_t BS, bool BE>
@@ -175,7 +185,7 @@ void HBase<T, BS, BE>::set_digestsize(size_t dsize) {
 template<HBC T, size_t BS, bool BE>
 void HBase<T, BS, BE>::print_block() const {
     fprintf(stderr, "__ m_block __\n");
-    for (int i = 0; i < get_blocksize(); i++) {
+    for (int i = 0; i < m_block.size(); i++) {
         fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(m_block.at(i)));
         if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
     }
@@ -185,7 +195,7 @@ void HBase<T, BS, BE>::print_block() const {
 template<HBC T, size_t BS, bool BE>
 void HBase<T, BS, BE>::print_state() const {
     fprintf(stderr, "__ m_state __\n");
-    for (int i = 0; i < get_statesize(); i++) {
+    for (int i = 0; i < m_state.size(); i++) {
         fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(m_state.at(i)));
         if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
     }
@@ -197,3 +207,4 @@ template class HBase<uint32_t, 16, true>;
 template class HBase<uint32_t, 16, false>;
 template class HBase<uint64_t, 16, true>;
 template class HBase<uint64_t, 16, false>;
+template class HBase<uint64_t, 25, false>;

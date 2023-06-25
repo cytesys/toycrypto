@@ -1,11 +1,22 @@
-#include <iostream>
+#include <gtest/gtest.h>
 
 #include <toycrypto/hash/sha3.h>
 
-int main(int argc, char** argv) {
-    SHA3_224 test{};
+class Sha3_224Tests : public ::testing::Test {
+protected:
+    void SetUp() override {
+        m_hfun.reset();
+    }
 
-    std::array<std::string, 134> cmp = {
+    SHA3_224 m_hfun{};
+
+    const std::string m_empty_digest =
+        "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7";
+
+    const std::string m_fox_digest =
+        "d15dadceaa4d5d7bb3b48f446421d542e08ad8887305e28d58335795";
+
+    const std::array<std::string, 134> m_cmp = {
         "6b4e03423667dbb73b6e15454f0eb1abd4597f9a1b078e3f5b5a6bc7",
         "97e2f98c0938943ab1a18a1721a04dff922ecc1ad14d4bbf905c02ca",
         "a16bae681b15eb93b0abdfbe91d403cd3d2deb8b5034eda3d75b5545",
@@ -142,39 +153,65 @@ int main(int argc, char** argv) {
         "2918451e0676a9b7ed94a15d4b6551a0330f40fc4a504f211be4ee25"
     };
 
-    std::string dgst{};
-    std::vector<int> fails{};
-    std::vector<int> succs{};
+    const std::string m_7000 =
+        "09640ce11825c10c3bc1fa5c32fff19fbc46baeb85a3a018a625c5aa";
+};
 
+TEST_F(Sha3_224Tests, Simple) {
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+}
+
+TEST_F(Sha3_224Tests, ResetWorks) {
+    EXPECT_NO_THROW(m_hfun.update("Hello", 5));
+    EXPECT_NO_THROW(m_hfun.reset());
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+}
+
+TEST_F(Sha3_224Tests, BasicInput) {
+    EXPECT_NO_THROW(m_hfun.update("The quick brown fox jumps over the lazy dog", 43));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+}
+
+TEST_F(Sha3_224Tests, ChoppedInput) {
+    EXPECT_NO_THROW(m_hfun.update("The quick brown fox ", 20));
+    EXPECT_NO_THROW(m_hfun.update("jumps o", 7));
+    EXPECT_NO_THROW(m_hfun.update("ver the la", 10));
+    EXPECT_NO_THROW(m_hfun.update("zy dog", 6));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+}
+
+TEST_F(Sha3_224Tests, Extensive) {
     int i, j;
-
-    for (i = 0; i < cmp.size(); i++) {
-        test.reset();
+    for (i = 0; i < m_cmp.size(); i++) {
+        EXPECT_NO_THROW(m_hfun.reset());
         for (j = 0; j < i; j++)
-            test.update("A", 1);
-        test.finalize();
-        dgst = test.hexdigest();
-        std::cout << i << ": " << dgst << " ";
-        if (dgst == cmp.at(i)) {
-            std::cout << "OK" << std::endl;
-            succs.push_back(i);
-            continue;
-        }
-
-        std::cout << "Failed!" << std::endl;
-        std::cout << i << ": " << cmp.at(i) << std::endl << std::endl;
-        fails.push_back(i);
+            EXPECT_NO_THROW(m_hfun.update("A", 1));
+        EXPECT_NO_THROW(m_hfun.finalize());
+        EXPECT_EQ(m_hfun.hexdigest(), m_cmp.at(i));
     }
+}
 
-    std::cout << "Succeeded lengths:" << std::endl;
-    for (int s : succs)
-        std::cout << s << " ";
-    std::cout << std::endl;
+TEST_F(Sha3_224Tests, SevenThousandAs) {
+    int i;
+    for (i = 0; i < 1000; i++)
+        EXPECT_NO_THROW(m_hfun.update("AAAAAAA", 7));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_7000);
+}
 
-    std::cout << "Failed lengths:" << std::endl;
-    for (int f : fails)
-        std::cout << f << " ";
-    std::cout << std::endl;
+TEST_F(Sha3_224Tests, UpdateAfterFinal) {
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_THROW(m_hfun.update("Hello", 5), std::invalid_argument);
+}
 
-	return EXIT_SUCCESS;
+TEST_F(Sha3_224Tests, DigestBeforeFinal) {
+    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
+    EXPECT_NO_THROW(m_hfun.reset());
+
+    EXPECT_NO_THROW(m_hfun.update("Hello", 5));
+    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
 }

@@ -35,6 +35,8 @@ protected:
     virtual void init_state() = 0;
     virtual void process_block() = 0;
 
+    void pad_md(uint8_t byte);
+
     void pad_md();
 
     void pad_haifa();
@@ -61,6 +63,10 @@ protected:
 
     inline void inc_counter(size_t len) { m_counter += len; }
 
+    inline void set_rate(size_t rate) { m_rate = rate; }
+
+    inline size_t get_rate() { return m_rate; }
+
     inline size_t get_length() const { return m_length; }
 
     inline size_t get_length_bits() const { return m_length << 3; }
@@ -73,18 +79,15 @@ protected:
 
     inline void set_phase(HashState phase) { m_phase = phase; }
 
-    inline size_t get_blocksize() const { return m_block.size(); }
+    inline size_t get_blocksize_bytes() const { return m_rate; }
 
-    inline size_t get_blocksize_bytes() const { return m_block.size() * sizeof(T); }
-
-    inline size_t get_blocksize_bits() const { return get_blocksize_bytes() << 3; }
-
-    inline size_t get_statesize() const { return m_state.size(); }
+    inline size_t get_blocksize_bits() const { return m_rate << 3; }
 
     std::vector<T> m_block{};
     std::vector<T> m_state{};
 
 private:
+    size_t m_rate{};
     size_t m_counter{};
     size_t m_length{};
     size_t m_digestsize{};
