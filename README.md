@@ -6,16 +6,19 @@
 
 ## Introduction
 
-ToyCrypto is a dynamically linked crypto library written in C\+\+. It should work on both *nix-like systems and Windows.
+ToyCrypto is a dynamically linked crypto library written in C\+\+. It should work on both *nix-like
+systems, MacOSX and Windows.
 
 ## *Disclaimer*
 
-*This library is just me toying with C++ and crypto (hence the name), and can not be relied upon to work correctly, obviously \:]*  
+*This library is the result of me toying with C++ and crypto (hence the name), and can not be
+relied upon to work correctly, obviously \:]*  
 ***This is for experimental use only! Use at your own risk!***
 
 ## What's currently implemented?
 
-ToyCrypto is very much a work in progress, and so far only a few hashing functions has been implemented:
+ToyCrypto is very much a work in progress, and so far only a few hashing functions has been
+implemented:
 
 - [x] SHA2:
     - [x] SHA224
@@ -36,10 +39,8 @@ ToyCrypto is very much a work in progress, and so far only a few hashing functio
     - [x] BLAKE384
     - [x] BLAKE512
 - [x] BLAKE2
-    - [x] BLAKE2s-224
-    - [x] BLAKE2s-256
-    - [x] BLAKE2b-384
-    - [x] BLAKE2b-512
+    - [x] BLAKE2s
+    - [x] BLAKE2b
 
 The following hash algorithms have also been implemented, but these have been deprecated by NIST.
 
@@ -56,7 +57,8 @@ The following hash algorithms have also been implemented, but these have been de
 - CMake 3.16 or higher
 - `ninja-build`
 
-I use [GTest](https://github.com/google/googletest/) for testing, and it should be downloaded automagically when you run cmake \:]
+I use [GTest](https://github.com/google/googletest/) for testing, and it should be downloaded
+automagically when you run cmake \:]
 
 ### Building
 
@@ -71,3 +73,6 @@ cd build
 ctest
 ```
 
+*Note: CTest appears to only run one test, and that is because all the tests are built into
+one single executable named unittests. To see the actual tests you should run the unittests
+executable directly. It should be in ./build/tests/ somewhere.*
