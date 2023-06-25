@@ -38,10 +38,10 @@ const std::array<uint64_t, 8>& _Blake2Impl<uint64_t>::m_k = BLAKE2_64_IV;
 
 // Round constants
 template<>
-const std::array<unsigned, 4> _Blake2Impl<uint32_t>::m_rc = { 16, 12, 8, 7 };
+const std::vector<unsigned> _Blake2Impl<uint32_t>::m_rc = { 16, 12, 8, 7 };
 
 template<>
-const std::array<unsigned, 4> _Blake2Impl<uint64_t>::m_rc = { 32, 24, 16, 63 };
+const std::vector<unsigned> _Blake2Impl<uint64_t>::m_rc = { 32, 24, 16, 63 };
 
 template<>
 const unsigned _Blake2Impl<uint32_t>::m_rounds = 10;
@@ -49,60 +49,45 @@ const unsigned _Blake2Impl<uint32_t>::m_rounds = 10;
 template<>
 const unsigned _Blake2Impl<uint64_t>::m_rounds = 12;
 
-template<x32or64 T>
+template<UTYPE T>
 _Blake2Impl<T>::_Blake2Impl() {
+    // Default constructor
     throw std::invalid_argument("Blake2 was instanciated with a wrong type");
 }
 
 template<>
-_Blake2Impl<uint32_t>::_Blake2Impl() {}
+_Blake2Impl<uint32_t>::_Blake2Impl() : HBase(16) {}
 
 template<>
-_Blake2Impl<uint64_t>::_Blake2Impl() {}
+_Blake2Impl<uint64_t>::_Blake2Impl() : HBase(16) {}
 
-template<x32or64 T>
-_Blake2Impl<T>::~_Blake2Impl() = default;
-
-template<x32or64 T>
-void _Blake2Impl<T>::print_v() {
-    fprintf(stderr, "__ m_v __\n");
-    for (int i = 0; i < m_v.size(); i++) {
-        fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) * 2), (uint64_t)(m_v.at(i)));
-        if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
-    }
-    fprintf(stderr, "\n");
-}
-
-template<x32or64 T>
-void _Blake2Impl<T>::init_state() {
+template<UTYPE T>
+void _Blake2Impl<T>::reset_subclass() {
+    this->m_tmp.assign(16, 0);
     this->m_state.assign(m_k.begin(), m_k.end());
-
-    m_v.fill(0);
 
     this->m_state.at(0) ^= 0x01010000;
     this->m_state.at(0) ^= ((m_key.size() & 0xff) << 8);
     this->m_state.at(0) ^= (this->get_digestsize() & 0xff);
 }
 
-template<x32or64 T>
+template<UTYPE T>
 void _Blake2Impl<T>::finalize() {
-    if (this->get_phase() >= HASH_FINAL)
+    if (this->get_enum() >= HASH_FINAL)
         throw std::invalid_argument("Cannot call finalize more than once");
 
     if (this->get_counter() > 0 || this->get_length() == 0) {
-        this->set_phase(HASH_LAST);
+        this->set_enum(HASH_FINAL);
         process_block();
     }
-
-    this->set_phase(HASH_FINAL);
 }
 
-template<x32or64 T>
+template<UTYPE T>
 void _Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, unsigned x, unsigned y) {
-    T va = m_v.at(a),
-        vb = m_v.at(b),
-        vc = m_v.at(c),
-        vd = m_v.at(d);
+    T va = this->m_tmp.at(a),
+        vb = this->m_tmp.at(b),
+        vc = this->m_tmp.at(c),
+        vd = this->m_tmp.at(d);
 
     T xx = this->m_block.at(BLAKE2_SIGMA.at((i % 10) * 16 + x));
     T yy = this->m_block.at(BLAKE2_SIGMA.at((i % 10) * 16 + y));
@@ -116,13 +101,13 @@ void _Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, un
     vc += vd;
     vb = ror<T>(vb ^ vc, m_rc.at(3));
 
-    m_v.at(a) = va;
-    m_v.at(b) = vb;
-    m_v.at(c) = vc;
-    m_v.at(d) = vd;
+    this->m_tmp.at(a) = va;
+    this->m_tmp.at(b) = vb;
+    this->m_tmp.at(c) = vc;
+    this->m_tmp.at(d) = vd;
 }
 
-template<x32or64 T>
+template<UTYPE T>
 void _Blake2Impl<T>::process_block() {
     unsigned i;
 
@@ -132,22 +117,21 @@ void _Blake2Impl<T>::process_block() {
 #endif
     // Initialize local work vector
     for (i = 0; i < 8; i++) {
-        m_v.at(i) = this->m_state.at(i);
-        m_v.at(8 + i) = m_k.at(i);
+        this->m_tmp.at(i) = this->m_state.at(i);
+        this->m_tmp.at(8 + i) = m_k.at(i);
     }
 
     // Mix in the message length
-    m_v.at(12) ^= (T)(this->get_length());
+    this->m_tmp.at(12) ^= (T)(this->get_length());
     if constexpr (std::is_same<T, uint32_t>::value)
-        m_v.at(13) ^= (T)((this->get_length() >> 32) & 0xffffffff);
+        this->m_tmp.at(13) ^= (T)((this->get_length() >> 32) & 0xffffffff);
 
     // Complement m_v[14] if this is the final block
-    // FIXME: Find a way to detect if this is the last block if the last block is full.
-    if (this->get_phase() == HASH_LAST)
-        m_v.at(14) = ~m_v.at(14);
+    if (this->get_enum() == HASH_FINAL)
+        this->m_tmp.at(14) = ~this->m_tmp.at(14);
 
 #if(DEBUG)
-    print_v();
+    this->print_tmp();
 
 #endif
     // ChaCha quarter round function
@@ -165,7 +149,7 @@ void _Blake2Impl<T>::process_block() {
 
     // Mix the working array into the internal state
     for (i = 0; i < 8; i++)
-        this->m_state.at(i) ^= m_v.at(i) ^ m_v.at(8 + i);
+        this->m_state.at(i) ^= this->m_tmp.at(i) ^ this->m_tmp.at(8 + i);
 
     // Empty m_block
     this->clear_block();
@@ -176,16 +160,14 @@ template class _Blake2Impl<uint64_t>;
 
 BLAKE2s::BLAKE2s(unsigned digestbits) {
     if (digestbits % 8 > 0 || digestbits < 8 || digestbits > 256)
-        throw std::invalid_argument("Invalid digestbits for BLAKE2S");
+        throw std::invalid_argument("Invalid digest bitlength for BLAKE2S");
 
     set_digestsize(digestbits / 8);
-    reset();
 }
 
 BLAKE2b::BLAKE2b(unsigned digestbits) {
     if (digestbits % 8 > 0 || digestbits < 8 || digestbits > 512)
-        throw std::invalid_argument("Invalid digestbits for BLAKE2B");
+        throw std::invalid_argument("Invalid digest bitlength for BLAKE2B");
 
     set_digestsize(digestbits / 8);
-    reset();
 }

@@ -36,32 +36,24 @@ constexpr std::array<uint8_t, 256> MD2_SIGMA = {
     0xDB, 0x99, 0x8D, 0x33, 0x9F, 0x11, 0x83, 0x14
 };
 
-MD2::MD2() {
+MD2::MD2() : HBase(16) {
     set_digestsize(16);
     reset();
 }
 
-MD2::~MD2() = default;
-
-void MD2::init_state() {
+void MD2::reset_subclass() {
     m_state.assign(48, 0);
-}
-
-void MD2::reset() {
     m_c.fill(0);
     m_l = 0;
-
-    HBase::reset();
 }
 
 void MD2::finalize() {
     int i;
 
-    if (get_phase() >= HASH_FINAL)
+    if (get_enum() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
-    if (get_counter() == get_blocksize_bytes()) {
-        set_phase(HASH_LAST);
+    if (get_counter() == get_rate()) {
         process_block();
         clear_counter();
     }
@@ -74,9 +66,9 @@ void MD2::finalize() {
 
     // Process the checksum as well
     m_block.assign(m_c.begin(), m_c.end());
-    process_block();
 
-    set_phase(HASH_FINAL);
+    set_enum(HASH_FINAL);
+    process_block();
 }
 
 void MD2::process_block() {

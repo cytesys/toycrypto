@@ -33,14 +33,12 @@ constexpr std::array<uint8_t, 64> MD5_SIGMA = {
     6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21,  6, 10, 15, 21
 };
 
-MD5::MD5() {
+MD5::MD5() : HBase(16) {
     set_digestsize(16);
     reset();
 }
 
-MD5::~MD5() = default;
-
-void MD5::init_state() {
+void MD5::reset_subclass() {
     m_state.assign(MD5_IV.begin(), MD5_IV.end());
 }
 

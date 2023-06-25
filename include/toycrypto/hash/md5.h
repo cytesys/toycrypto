@@ -9,15 +9,15 @@
 extern "C++" {
 
 class [[deprecated("MD5 is deprecated. See RFC 6151")]] MD5 final
-    : public HBase<uint32_t, 16, false> {
+    : public HBase<uint32_t, false> {
 public:
     TC_API MD5();
-    TC_API ~MD5() override;
+    TC_API ~MD5() override = default;
 
     TC_API void finalize() override;
 
 private:
-    void init_state() override;
+    void reset_subclass() override;
     void process_block() override;
 };
 

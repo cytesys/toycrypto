@@ -9,16 +9,15 @@
 extern "C++" {
 
 class [[deprecated("MD2 is deprecated. See RFC 6149")]] MD2 final
-    : public HBase<uint8_t, 16, true> {
+    : public HBase<uint8_t, true> {
 public:
     TC_API MD2();
-    TC_API ~MD2() override;
+    TC_API ~MD2() override = default;
 
-    TC_API void reset() override;
     TC_API void finalize() override;
 
 private:
-    void init_state() override;
+    void reset_subclass() override;
     void process_block() override;
 
     std::array<uint8_t, 16> m_c{};

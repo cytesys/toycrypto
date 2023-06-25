@@ -8,7 +8,9 @@ protected:
         m_hfun.reset();
     }
 
-    SHAKE256 m_hfun{560};
+    SHAKE256 m_hfun{};
+
+    const size_t m_digest_size = 70;
 
     const std::string m_empty_digest =
         "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be141e96616fb1";
@@ -159,20 +161,20 @@ protected:
 
 TEST_F(Shake256Tests, Simple) {
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_empty_digest);
 }
 
 TEST_F(Shake256Tests, ResetWorks) {
     EXPECT_NO_THROW(m_hfun.update("Hello", 5));
     EXPECT_NO_THROW(m_hfun.reset());
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_empty_digest);
 }
 
 TEST_F(Shake256Tests, BasicInput) {
     EXPECT_NO_THROW(m_hfun.update("The quick brown fox jumps over the lazy dog", 43));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_fox_digest);
 }
 
 TEST_F(Shake256Tests, ChoppedInput) {
@@ -181,7 +183,7 @@ TEST_F(Shake256Tests, ChoppedInput) {
     EXPECT_NO_THROW(m_hfun.update("ver the la", 10));
     EXPECT_NO_THROW(m_hfun.update("zy dog", 6));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_fox_digest);
 }
 
 TEST_F(Shake256Tests, Extensive) {
@@ -191,7 +193,7 @@ TEST_F(Shake256Tests, Extensive) {
         for (j = 0; j < i; j++)
             EXPECT_NO_THROW(m_hfun.update("A", 1));
         EXPECT_NO_THROW(m_hfun.finalize());
-        EXPECT_EQ(m_hfun.hexdigest(), m_cmp.at(i));
+        EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_cmp.at(i));
     }
 }
 
@@ -200,7 +202,7 @@ TEST_F(Shake256Tests, SevenThousandAs) {
     for (i = 0; i < 1000; i++)
         EXPECT_NO_THROW(m_hfun.update("AAAAAAA", 7));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_7000);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_7000);
 }
 
 TEST_F(Shake256Tests, UpdateAfterFinal) {
@@ -213,5 +215,5 @@ TEST_F(Shake256Tests, DigestBeforeFinal) {
     EXPECT_NO_THROW(m_hfun.reset());
 
     EXPECT_NO_THROW(m_hfun.update("Hello", 5));
-    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
+    EXPECT_THROW(m_hfun.hexdigest(m_digest_size), std::invalid_argument);
 }

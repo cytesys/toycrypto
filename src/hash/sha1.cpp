@@ -11,14 +11,13 @@ constexpr std::array<uint32_t, 4> SHA1_K = {
     0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6
 };
 
-SHA1::SHA1() {
+SHA1::SHA1() : HBase(16) {
     set_digestsize(20);
     reset();
 }
 
-SHA1::~SHA1() = default;
-
-void SHA1::init_state() {
+void SHA1::reset_subclass() {
+    m_tmp.assign(80, 0);
     m_state.assign(SHA1_IV.begin(), SHA1_IV.end());
 }
 
@@ -43,11 +42,11 @@ void SHA1::process_block() {
 #endif
     for (i = 0; i < 80; i++) {
         if (i < 16) {
-            m_words.at(i) = m_block.at(i);
+            m_tmp.at(i) = m_block.at(i);
         } else {
-            m_words.at(i) = rol<uint32_t>(
-                m_words.at((-3ll) + i) ^ m_words.at((-8ll) + i) ^ \
-                m_words.at((-14ll) + i) ^ m_words.at((-16ll) + i),
+            m_tmp.at(i) = rol(
+                m_tmp.at((-3ll) + i) ^ m_tmp.at((-8ll) + i) ^ \
+                m_tmp.at((-14ll) + i) ^ m_tmp.at((-16ll) + i),
                 1
             );
         }
@@ -68,10 +67,10 @@ void SHA1::process_block() {
             k = SHA1_K.at(3);
         }
 
-        tmp = rol<uint32_t>(a, 5) + f + e + k + m_words.at(i);
+        tmp = rol(a, 5) + f + e + k + m_tmp.at(i);
         e = d;
         d = c;
-        c = rol<uint32_t>(b, 30);
+        c = rol(b, 30);
         b = a;
         a = tmp;
     }
@@ -82,6 +81,5 @@ void SHA1::process_block() {
     m_state.at(3) += d;
     m_state.at(4) += e;
 
-    m_words.fill(0);
     clear_block();
 }

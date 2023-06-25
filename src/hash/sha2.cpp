@@ -75,41 +75,39 @@ const std::vector<uint64_t> _Sha2Impl<uint64_t>::m_k = {
 
 // SHA2 round constants
 template<>
-const std::array<unsigned, 12> _Sha2Impl<uint32_t>::m_rc = {
+const std::vector<unsigned> _Sha2Impl<uint32_t>::m_rc = {
     7, 18, 3, 17, 19, 10, 2, 13, 22, 6, 11, 25
 };
 
 template<>
-const std::array<unsigned, 12> _Sha2Impl<uint64_t>::m_rc = {
+const std::vector<unsigned> _Sha2Impl<uint64_t>::m_rc = {
     1, 8, 7, 19, 61, 6, 28, 34, 39, 14, 18, 41
 };
 
-template<x32or64 T>
+template<UTYPE T>
 _Sha2Impl<T>::_Sha2Impl() {
+    // Default constructor
     throw std::invalid_argument("Sha2 was instanciated with a wrong type");
 }
 
-template<x32or64 T>
-_Sha2Impl<T>::~_Sha2Impl() = default;
+template<>
+_Sha2Impl<uint32_t>::_Sha2Impl() : HBase(16) {}
 
 template<>
-_Sha2Impl<uint32_t>::_Sha2Impl() {}
+_Sha2Impl<uint64_t>::_Sha2Impl() : HBase(16) {}
 
-template<>
-_Sha2Impl<uint64_t>::_Sha2Impl() {}
-
-template<x32or64 T>
-void _Sha2Impl<T>::init_intermediate() {
-    m_v.assign(m_k.size(), 0);
+template<UTYPE T>
+void _Sha2Impl<T>::reset_subclass() {
+    this->m_tmp.assign(m_k.size(), 0);
 }
 
-template<x32or64 T>
+template<UTYPE T>
 void _Sha2Impl<T>::finalize() {
     this->pad_md();
     this->append_length();
 }
 
-template<x32or64 T>
+template<UTYPE T>
 void _Sha2Impl<T>::process_block() {
     T a = this->m_state.at(0),
         b = this->m_state.at(1),
@@ -130,16 +128,16 @@ void _Sha2Impl<T>::process_block() {
     for (i = 0; i < m_k.size(); i++) {
         if (i < 16) {
             // Copy words from block into working array
-            m_v.at(i) = this->m_block.at(i);
+            this->m_tmp.at(i) = this->m_block.at(i);
         } else {
             // Expand the 16 first bytes of the working array
-            s0 = ror<T>(m_v.at((-15ll) + i), m_rc.at(0)) ^
-                 ror<T>(m_v.at((-15ll) + i), m_rc.at(1)) ^
-                 (m_v.at((-15ll) + i) >> m_rc.at(2));
-            s1 = ror<T>(m_v.at((-2ll) + i), m_rc.at(3)) ^
-                 ror<T>(m_v.at((-2ll) + i), m_rc.at(4)) ^
-                 (m_v.at((-2ll) + i) >> m_rc.at(5));
-            m_v.at(i) = m_v.at((-16ll) + i) + s0 + m_v.at((-7ll) + i) + s1;
+            s0 = ror<T>(this->m_tmp.at((-15ll) + i), m_rc.at(0)) ^
+                 ror<T>(this->m_tmp.at((-15ll) + i), m_rc.at(1)) ^
+                 (this->m_tmp.at((-15ll) + i) >> m_rc.at(2));
+            s1 = ror<T>(this->m_tmp.at((-2ll) + i), m_rc.at(3)) ^
+                 ror<T>(this->m_tmp.at((-2ll) + i), m_rc.at(4)) ^
+                 (this->m_tmp.at((-2ll) + i) >> m_rc.at(5));
+            this->m_tmp.at(i) = this->m_tmp.at((-16ll) + i) + s0 + this->m_tmp.at((-7ll) + i) + s1;
         }
     }
 
@@ -147,7 +145,7 @@ void _Sha2Impl<T>::process_block() {
     for (i = 0; i < m_k.size(); i++) {
         s0 = ror<T>(a, m_rc.at(6)) ^ ror<T>(a, m_rc.at(7)) ^ ror<T>(a, m_rc.at(8));
         s1 = ror<T>(e, m_rc.at(9)) ^ ror<T>(e, m_rc.at(10)) ^ ror<T>(e, m_rc.at(11));
-        tmp1 = h + s1 + ((e & f) ^ (~e & g)) + m_k.at(i) + m_v.at(i);
+        tmp1 = h + s1 + ((e & f) ^ (~e & g)) + m_k.at(i) + this->m_tmp.at(i);
         tmp2 = s0 + ((a & b) ^ (a & c) ^ (b & c));
 
         h = g;
@@ -182,9 +180,9 @@ SHA224::SHA224() {
     reset();
 }
 
-void SHA224::init_state() {
+void SHA224::reset_subclass() {
     m_state.assign(SHA224_IV.begin(), SHA224_IV.end());
-    init_intermediate();
+    _Sha2Impl::reset_subclass();
 }
 
 SHA256::SHA256() {
@@ -192,9 +190,9 @@ SHA256::SHA256() {
     reset();
 }
 
-void SHA256::init_state() {
+void SHA256::reset_subclass() {
     m_state.assign(SHA256_IV.begin(), SHA256_IV.end());
-    init_intermediate();
+    _Sha2Impl::reset_subclass();
 }
 
 SHA384::SHA384() {
@@ -202,9 +200,9 @@ SHA384::SHA384() {
     reset();
 }
 
-void SHA384::init_state() {
+void SHA384::reset_subclass() {
     m_state.assign(SHA384_IV.begin(), SHA384_IV.end());
-    init_intermediate();
+    _Sha2Impl::reset_subclass();
 }
 
 SHA512::SHA512() {
@@ -212,7 +210,7 @@ SHA512::SHA512() {
     reset();
 }
 
-void SHA512::init_state() {
+void SHA512::reset_subclass() {
     m_state.assign(SHA512_IV.begin(), SHA512_IV.end());
-    init_intermediate();
+    _Sha2Impl::reset_subclass();
 }

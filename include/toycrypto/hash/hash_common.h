@@ -10,32 +10,30 @@
 
 extern "C++" {
 
-enum HashState {
+template<typename T>
+concept UTYPE = std::is_integral<T>::value && std::is_unsigned<T>::value;
+
+enum HashEnum {
+    HASH_NOT_READY,
     HASH_INIT,
     HASH_UPDATE,
-    HASH_LAST,
     HASH_FINAL,
     HASH_DIGEST
 };
 
-template<typename T>
-concept x32or64 = std::is_integral<T>::value && (sizeof(T) == 4 || sizeof(T) == 8) && std::is_unsigned<T>::value;
-
-class HashBase {
+class HashAPI {
 public:
-    TC_API virtual ~HashBase() = 0;
+    virtual ~HashAPI() = 0;
 
-    TC_API virtual void reset() = 0;
-    TC_API virtual void update(const char* buffer, size_t buflen) = 0;
-    TC_API virtual void finalize() = 0;
-    TC_API virtual void digest(unsigned char* output, size_t outlen) = 0;
-};
+    virtual void reset() = 0;
 
-class HashImpl : public HashBase {};
+    virtual void update(const char* input, size_t input_len) = 0;
 
-class HashClass : public HashBase {
-public:
-    TC_API virtual std::string hexdigest() = 0;
+    virtual void finalize() = 0;
+
+    virtual void digest(unsigned char* outbuf, size_t outbuf_len = 0) = 0;
+
+    virtual std::string hexdigest(size_t length = 0) = 0;
 };
 
 }

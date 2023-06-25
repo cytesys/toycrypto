@@ -12,18 +12,16 @@
 extern "C++" {
 
 class [[deprecated("SHA1 is deprecated. See FIPS 180-5")]] SHA1 final
-    : public HBase<uint32_t, 16, true> {
+    : public HBase<uint32_t, true> {
 public:
     TC_API SHA1();
-    TC_API ~SHA1 () override;
+    TC_API ~SHA1() override = default;
 
     TC_API void finalize() override;
 
 protected:
-    TC_API void init_state() override;
+    TC_API void reset_subclass() override;
     TC_API void process_block() override;
-
-    std::array<uint32_t, 80> m_words{};
 };
 
 }

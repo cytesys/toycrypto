@@ -8,56 +8,61 @@
 
 extern "C++" {
 
-template<x32or64 T>
-class _Sha2Impl : public HBase<T, 16, true> {
+template<UTYPE T>
+class _Sha2Impl : public HBase<T, true> {
 public:
     TC_API _Sha2Impl();
-    TC_API ~_Sha2Impl() override;
 
-    TC_API void finalize() override;
+    TC_API void finalize() final;
 
 protected:
-    void init_intermediate();
+    void reset_subclass() override;
 
 private:
-    void process_block() override;
-
-    std::vector<T> m_v{}; // Working array
+    void process_block() final;
 
     static const std::vector<T> m_k;
-    static const std::array<unsigned, 12> m_rc;
+    static const std::vector<unsigned> m_rc;
 };
 
 class SHA224 final : public _Sha2Impl<uint32_t> {
 public:
     TC_API SHA224();
 
+    TC_API ~SHA224() override = default;
+
 private:
-    void init_state() override;
+    void reset_subclass() override;
 };
 
 class SHA256 final : public _Sha2Impl<uint32_t> {
 public:
     TC_API SHA256();
 
+    TC_API ~SHA256() override = default;
+
 private:
-    void init_state() override;
+    void reset_subclass() override;
 };
 
 class SHA384 final : public _Sha2Impl<uint64_t> {
 public:
     TC_API SHA384();
 
+    TC_API ~SHA384() override = default;
+
 private:
-    void init_state() override;
+    void reset_subclass() override;
 };
 
 class SHA512 final : public _Sha2Impl<uint64_t> {
 public:
     TC_API SHA512();
 
+    TC_API ~SHA512() override = default;
+
 private:
-    void init_state() override;
+    void reset_subclass() override;
 };
 
 }

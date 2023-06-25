@@ -23,40 +23,39 @@ uint64_t Keccak1600::m_rc(size_t t) {
     return result & 0x1;
 }
 
-Keccak1600::Keccak1600(size_t capacity, size_t digestbits, uint8_t dsuf)
-    : m_capacity(capacity / 8)
+Keccak1600::Keccak1600(size_t capacity, uint8_t dsuf, size_t digestsize)
+    : HBase(25, 200 - capacity)
+    , m_capacity(capacity)
     , m_dsuf(dsuf)
 {
-    if (capacity % 8 > 0)
-        throw std::invalid_argument("Invalid value for capacity");
+    if (capacity <= 0 || capacity >= 200)
+        throw std::invalid_argument("Invalid capacity");
 
-    if (digestbits % 8 > 0)
-        throw std::invalid_argument("Invalid value for digetsbitlength");
+    if (digestsize < 0)
+        throw std::invalid_argument("Invalid digest bitlength");
 
-    set_digestsize(digestbits / 8);
-    set_rate(200 - m_capacity);
+    if (digestsize == 0) {
+        set_xof();
+        digestsize++;
+    }
+
+    set_digestsize(digestsize);
+    reset();
 }
 
-Keccak1600::~Keccak1600() = default;
-
-void Keccak1600::reset() {
-    m_v.fill(0);
-
-    HBase::reset();
-}
-
-void Keccak1600::init_state() {
+void Keccak1600::reset_subclass() {
+    m_tmp.assign(25, 0);
     m_state.assign(25, 0);
 }
 
 void Keccak1600::finalize() {
-    pad_md(m_dsuf);
+    pad_byte(m_dsuf);
 
-    if ((m_dsuf & 0x80) != 0 && (get_index() + 1) == get_rate())
+    if ((m_dsuf & 0x80) != 0 && get_index() == get_rate())
         process_block();
 
-    m_block.at((get_rate() / 8) - 1) ^= 0x8000000000000000;
-    set_phase(HASH_FINAL);
+    m_block.at(get_rate() / 8 - 1) ^= 0x8000000000000000;
+    set_enum(HASH_FINAL);
     process_block();
 }
 
@@ -75,7 +74,7 @@ void Keccak1600::process_block() {
 #endif
     for (i = 0; i < 24; i++) {
         for (x = 0; x < 5; x++) {
-            m_v.at(x) = m_state.at(lane(x, 0)) ^
+            m_tmp.at(x) = m_state.at(lane(x, 0)) ^
                       m_state.at(lane(x, 1)) ^
                       m_state.at(lane(x, 2)) ^
                       m_state.at(lane(x, 3)) ^
@@ -83,21 +82,21 @@ void Keccak1600::process_block() {
         }
 
         for (x = 0; x < 5; x++) {
-            d = m_v.at((x + 4) % 5) ^ rol<uint64_t>(m_v.at((x + 1) % 5), 1);
+            d = m_tmp.at((x + 4) % 5) ^ rol<uint64_t>(m_tmp.at((x + 1) % 5), 1);
             for (y = 0; y < 5; y++)
                 m_state.at(lane(x, y)) ^= d;
         }
 
         for (y = 0; y < 5; y++) {
             for (x = 0; x < 5; x++)
-                m_v.at(lane(y, ((2 * x) + (3 * y)) % 5)) =
+                m_tmp.at(lane(y, ((2 * x) + (3 * y)) % 5)) =
                     rol<uint64_t>(m_state.at(lane(x, y)), KECCAK1600_K.at(lane(x, y)));
         }
 
         for (y = 0; y < 5; y++) {
             for (x = 0; x < 5; x++) {
-                m_state.at(lane(x, y)) = m_v.at(lane(x, y)) ^
-                    ((~m_v.at(lane((x + 1) % 5, y))) & m_v.at(lane((x + 2) % 5, y)));
+                m_state.at(lane(x, y)) = m_tmp.at(lane(x, y)) ^
+                    ((~m_tmp.at(lane((x + 1) % 5, y))) & m_tmp.at(lane((x + 2) % 5, y)));
             }
         }
 

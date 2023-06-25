@@ -8,7 +8,9 @@ protected:
         m_hfun.reset();
     }
 
-    SHAKE128 m_hfun{280};
+    SHAKE128 m_hfun{};
+
+    const size_t m_digest_size = 35;
 
     const std::string m_empty_digest =
         "7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef263cb1ee";
@@ -159,20 +161,20 @@ protected:
 
 TEST_F(Shake128Tests, Simple) {
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_empty_digest);
 }
 
 TEST_F(Shake128Tests, ResetWorks) {
     EXPECT_NO_THROW(m_hfun.update("Hello", 5));
     EXPECT_NO_THROW(m_hfun.reset());
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_empty_digest);
 }
 
 TEST_F(Shake128Tests, BasicInput) {
     EXPECT_NO_THROW(m_hfun.update("The quick brown fox jumps over the lazy dog", 43));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_fox_digest);
 }
 
 TEST_F(Shake128Tests, ChoppedInput) {
@@ -181,7 +183,7 @@ TEST_F(Shake128Tests, ChoppedInput) {
     EXPECT_NO_THROW(m_hfun.update("ver the la", 10));
     EXPECT_NO_THROW(m_hfun.update("zy dog", 6));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_fox_digest);
 }
 
 TEST_F(Shake128Tests, Extensive) {
@@ -191,7 +193,7 @@ TEST_F(Shake128Tests, Extensive) {
         for (j = 0; j < i; j++)
             EXPECT_NO_THROW(m_hfun.update("A", 1));
         EXPECT_NO_THROW(m_hfun.finalize());
-        EXPECT_EQ(m_hfun.hexdigest(), m_cmp.at(i));
+        EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_cmp.at(i));
     }
 }
 
@@ -200,7 +202,7 @@ TEST_F(Shake128Tests, SevenThousandAs) {
     for (i = 0; i < 1000; i++)
         EXPECT_NO_THROW(m_hfun.update("AAAAAAA", 7));
     EXPECT_NO_THROW(m_hfun.finalize());
-    EXPECT_EQ(m_hfun.hexdigest(), m_7000);
+    EXPECT_EQ(m_hfun.hexdigest(m_digest_size), m_7000);
 }
 
 TEST_F(Shake128Tests, UpdateAfterFinal) {
@@ -209,9 +211,9 @@ TEST_F(Shake128Tests, UpdateAfterFinal) {
 }
 
 TEST_F(Shake128Tests, DigestBeforeFinal) {
-    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
+    EXPECT_THROW(m_hfun.hexdigest(m_digest_size), std::invalid_argument);
     EXPECT_NO_THROW(m_hfun.reset());
 
     EXPECT_NO_THROW(m_hfun.update("Hello", 5));
-    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
+    EXPECT_THROW(m_hfun.hexdigest(m_digest_size), std::invalid_argument);
 }

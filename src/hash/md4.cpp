@@ -1,30 +1,17 @@
 #include <toycrypto/hash/md4.h>
 #include <toycrypto/internal/common.h>
 
-//#define MD4_ROR(a, n) ROR((a), (n), 32)
-//#define MD4_ROL(a, n) ROL((a), (n), 32)
-
-//#define F(x, y, z) (((x) & (y)) | ((~(x)) & (z)))
-//#define G(x, y, z) (((x) & (y)) | ((x) & (z)) | ((y) & (z)))
-//#define H(x, y, z) ((x) ^ (y) ^ (z))
-
-//#define FF(a, b, c, d, x, s) (a) = (MD4_ROL((a) + F((b), (c), (d)) + m_block.at(x), (s)))
-//#define GG(a, b, c, d, x, s) (a) = (MD4_ROL((a) + G((b), (c), (d)) + m_block.at(x) + 0x5a827999u, (s)))
-//#define HH(a, b, c, d, x, s) (a) = (MD4_ROL((a) + H((b), (c), (d)) + m_block.at(x) + 0x6ed9eba1u, (s)))
-
 // MD4 initial values
 constexpr std::array<uint32_t, 4> MD4_IV = {
     0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476
 };
 
-MD4::MD4() {
+MD4::MD4() : HBase(16) {
     set_digestsize(16);
     reset();
 }
 
-MD4::~MD4() = default;
-
-void MD4::init_state() {
+void MD4::reset_subclass() {
     m_state.assign(MD4_IV.begin(), MD4_IV.end());
 }
 
