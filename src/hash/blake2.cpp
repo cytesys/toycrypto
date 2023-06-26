@@ -31,38 +31,38 @@ constexpr std::array<unsigned, 160> BLAKE2_SIGMA = {
 };
 
 template<>
-const std::array<uint32_t, 8>& _Blake2Impl<uint32_t>::m_k = BLAKE2_32_IV;
+const std::array<uint32_t, 8>& Blake2Impl<uint32_t>::m_k = BLAKE2_32_IV;
 
 template<>
-const std::array<uint64_t, 8>& _Blake2Impl<uint64_t>::m_k = BLAKE2_64_IV;
+const std::array<uint64_t, 8>& Blake2Impl<uint64_t>::m_k = BLAKE2_64_IV;
 
 // Round constants
 template<>
-const std::vector<unsigned> _Blake2Impl<uint32_t>::m_rc = { 16, 12, 8, 7 };
+const std::vector<unsigned> Blake2Impl<uint32_t>::m_rc = { 16, 12, 8, 7 };
 
 template<>
-const std::vector<unsigned> _Blake2Impl<uint64_t>::m_rc = { 32, 24, 16, 63 };
+const std::vector<unsigned> Blake2Impl<uint64_t>::m_rc = { 32, 24, 16, 63 };
 
 template<>
-const unsigned _Blake2Impl<uint32_t>::m_rounds = 10;
+const unsigned Blake2Impl<uint32_t>::m_rounds = 10;
 
 template<>
-const unsigned _Blake2Impl<uint64_t>::m_rounds = 12;
+const unsigned Blake2Impl<uint64_t>::m_rounds = 12;
 
 template<UTYPE T>
-_Blake2Impl<T>::_Blake2Impl() {
+Blake2Impl<T>::Blake2Impl() {
     // Default constructor
     throw std::invalid_argument("Blake2 was instanciated with a wrong type");
 }
 
 template<>
-_Blake2Impl<uint32_t>::_Blake2Impl() : HBase(16) {}
+Blake2Impl<uint32_t>::Blake2Impl() : HBase(16) {}
 
 template<>
-_Blake2Impl<uint64_t>::_Blake2Impl() : HBase(16) {}
+Blake2Impl<uint64_t>::Blake2Impl() : HBase(16) {}
 
 template<UTYPE T>
-void _Blake2Impl<T>::reset_subclass() {
+void Blake2Impl<T>::reset_subclass() {
     this->m_tmp.assign(16, 0);
     this->m_state.assign(m_k.begin(), m_k.end());
 
@@ -72,7 +72,7 @@ void _Blake2Impl<T>::reset_subclass() {
 }
 
 template<UTYPE T>
-void _Blake2Impl<T>::finalize() {
+void Blake2Impl<T>::finalize() {
     if (this->get_enum() >= HASH_FINAL)
         throw std::invalid_argument("Cannot call finalize more than once");
 
@@ -83,7 +83,7 @@ void _Blake2Impl<T>::finalize() {
 }
 
 template<UTYPE T>
-void _Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, unsigned x, unsigned y) {
+void Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, unsigned x, unsigned y) {
     T va = this->m_tmp.at(a),
         vb = this->m_tmp.at(b),
         vc = this->m_tmp.at(c),
@@ -108,7 +108,7 @@ void _Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, un
 }
 
 template<UTYPE T>
-void _Blake2Impl<T>::process_block() {
+void Blake2Impl<T>::process_block() {
     unsigned i;
 
 #if(DEBUG)
@@ -155,8 +155,8 @@ void _Blake2Impl<T>::process_block() {
     this->clear_block();
 }
 
-template class _Blake2Impl<uint32_t>;
-template class _Blake2Impl<uint64_t>;
+template class Blake2Impl<uint32_t>;
+template class Blake2Impl<uint64_t>;
 
 BLAKE2s::BLAKE2s(unsigned digestbits) {
     if (digestbits % 8 > 0 || digestbits < 8 || digestbits > 256)

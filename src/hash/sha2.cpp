@@ -1,7 +1,5 @@
 #include <toycrypto/internal/common.h>
-#include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/sha2.h>
-#include <toycrypto/common/util.h>
 
 // SHA2 initial values
 constexpr std::array<uint32_t, 8> SHA224_IV = {
@@ -38,7 +36,7 @@ constexpr std::array<uint64_t, 8> SHA512_IV = {
 
 // SHA2 constants
 template<>
-const std::vector<uint32_t> _Sha2Impl<uint32_t>::m_k = {
+const std::vector<uint32_t> Sha2Impl<uint32_t>::m_k = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
     0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
@@ -50,7 +48,7 @@ const std::vector<uint32_t> _Sha2Impl<uint32_t>::m_k = {
 };
 
 template <>
-const std::vector<uint64_t> _Sha2Impl<uint64_t>::m_k = {
+const std::vector<uint64_t> Sha2Impl<uint64_t>::m_k = {
     0x428a2f98d728ae22, 0x7137449123ef65cd, 0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
     0x3956c25bf348b538, 0x59f111f1b605d019, 0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
     0xd807aa98a3030242, 0x12835b0145706fbe, 0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
@@ -75,40 +73,40 @@ const std::vector<uint64_t> _Sha2Impl<uint64_t>::m_k = {
 
 // SHA2 round constants
 template<>
-const std::vector<unsigned> _Sha2Impl<uint32_t>::m_rc = {
+const std::vector<unsigned> Sha2Impl<uint32_t>::m_rc = {
     7, 18, 3, 17, 19, 10, 2, 13, 22, 6, 11, 25
 };
 
 template<>
-const std::vector<unsigned> _Sha2Impl<uint64_t>::m_rc = {
+const std::vector<unsigned> Sha2Impl<uint64_t>::m_rc = {
     1, 8, 7, 19, 61, 6, 28, 34, 39, 14, 18, 41
 };
 
 template<UTYPE T>
-_Sha2Impl<T>::_Sha2Impl() {
+Sha2Impl<T>::Sha2Impl() {
     // Default constructor
     throw std::invalid_argument("Sha2 was instanciated with a wrong type");
 }
 
 template<>
-_Sha2Impl<uint32_t>::_Sha2Impl() : HBase(16) {}
+Sha2Impl<uint32_t>::Sha2Impl() : HBase(16) {}
 
 template<>
-_Sha2Impl<uint64_t>::_Sha2Impl() : HBase(16) {}
+Sha2Impl<uint64_t>::Sha2Impl() : HBase(16) {}
 
 template<UTYPE T>
-void _Sha2Impl<T>::reset_subclass() {
+void Sha2Impl<T>::reset_subclass() {
     this->m_tmp.assign(m_k.size(), 0);
 }
 
 template<UTYPE T>
-void _Sha2Impl<T>::finalize() {
+void Sha2Impl<T>::finalize() {
     this->pad_md();
     this->append_length();
 }
 
 template<UTYPE T>
-void _Sha2Impl<T>::process_block() {
+void Sha2Impl<T>::process_block() {
     T a = this->m_state.at(0),
         b = this->m_state.at(1),
         c = this->m_state.at(2),
@@ -172,8 +170,8 @@ void _Sha2Impl<T>::process_block() {
     this->clear_block();
 }
 
-template class _Sha2Impl<uint32_t>;
-template class _Sha2Impl<uint64_t>;
+template class Sha2Impl<uint32_t>;
+template class Sha2Impl<uint64_t>;
 
 SHA224::SHA224() {
     set_digestsize(28);
@@ -182,7 +180,7 @@ SHA224::SHA224() {
 
 void SHA224::reset_subclass() {
     m_state.assign(SHA224_IV.begin(), SHA224_IV.end());
-    _Sha2Impl::reset_subclass();
+    Sha2Impl::reset_subclass();
 }
 
 SHA256::SHA256() {
@@ -192,7 +190,7 @@ SHA256::SHA256() {
 
 void SHA256::reset_subclass() {
     m_state.assign(SHA256_IV.begin(), SHA256_IV.end());
-    _Sha2Impl::reset_subclass();
+    Sha2Impl::reset_subclass();
 }
 
 SHA384::SHA384() {
@@ -202,7 +200,7 @@ SHA384::SHA384() {
 
 void SHA384::reset_subclass() {
     m_state.assign(SHA384_IV.begin(), SHA384_IV.end());
-    _Sha2Impl::reset_subclass();
+    Sha2Impl::reset_subclass();
 }
 
 SHA512::SHA512() {
@@ -212,5 +210,5 @@ SHA512::SHA512() {
 
 void SHA512::reset_subclass() {
     m_state.assign(SHA512_IV.begin(), SHA512_IV.end());
-    _Sha2Impl::reset_subclass();
+    Sha2Impl::reset_subclass();
 }

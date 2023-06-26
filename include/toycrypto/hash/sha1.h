@@ -3,9 +3,6 @@
 #ifndef TC_SHA1_H
 #define TC_SHA1_H
 
-#include <string>
-#include <array>
-
 #include <toycrypto/internal/headerstuff.h>
 #include <toycrypto/internal/hashbase.h>
 

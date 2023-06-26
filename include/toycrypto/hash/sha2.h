@@ -9,9 +9,9 @@
 extern "C++" {
 
 template<UTYPE T>
-class _Sha2Impl : public HBase<T, true> {
+class Sha2Impl : public HBase<T, true> {
 public:
-    TC_API _Sha2Impl();
+    TC_API Sha2Impl();
 
     TC_API void finalize() final;
 
@@ -25,7 +25,7 @@ private:
     static const std::vector<unsigned> m_rc;
 };
 
-class SHA224 final : public _Sha2Impl<uint32_t> {
+class SHA224 final : public Sha2Impl<uint32_t> {
 public:
     TC_API SHA224();
 
@@ -35,7 +35,7 @@ private:
     void reset_subclass() override;
 };
 
-class SHA256 final : public _Sha2Impl<uint32_t> {
+class SHA256 final : public Sha2Impl<uint32_t> {
 public:
     TC_API SHA256();
 
@@ -45,7 +45,7 @@ private:
     void reset_subclass() override;
 };
 
-class SHA384 final : public _Sha2Impl<uint64_t> {
+class SHA384 final : public Sha2Impl<uint64_t> {
 public:
     TC_API SHA384();
 
@@ -55,7 +55,7 @@ private:
     void reset_subclass() override;
 };
 
-class SHA512 final : public _Sha2Impl<uint64_t> {
+class SHA512 final : public Sha2Impl<uint64_t> {
 public:
     TC_API SHA512();
 

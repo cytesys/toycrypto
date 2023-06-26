@@ -23,17 +23,17 @@ enum HashEnum {
 
 class HashAPI {
 public:
-    virtual ~HashAPI() = 0;
+    TC_API virtual ~HashAPI() = 0;
 
-    virtual void reset() = 0;
+    TC_API virtual void reset() = 0;
 
-    virtual void update(const char* input, size_t input_len) = 0;
+    TC_API virtual void update(const char* input, size_t input_len) = 0;
 
-    virtual void finalize() = 0;
+    TC_API virtual void finalize() = 0;
 
-    virtual void digest(unsigned char* outbuf, size_t outbuf_len = 0) = 0;
+    TC_API virtual void digest(unsigned char* outbuf, size_t outbuf_len = 0) = 0;
 
-    virtual std::string hexdigest(size_t length = 0) = 0;
+    TC_API virtual std::string hexdigest(size_t length = 0) = 0;
 };
 
 }

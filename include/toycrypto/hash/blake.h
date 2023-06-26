@@ -9,11 +9,12 @@
 extern "C++" {
 
 template<UTYPE T>
-class _BlakeImpl : public HBase<T, true> {
+class BlakeImpl : public HBase<T, true> {
 public:
-    TC_API _BlakeImpl();
+    TC_API BlakeImpl();
 
     TC_API void finalize() final;
+
     [[maybe_unused]] TC_API void set_salt(const char* buffer, size_t buflen);
 
 protected:
@@ -21,6 +22,7 @@ protected:
 
 private:
     void process_block() final;
+
     inline void blake_g(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
 
     std::vector<T> m_salt{};
@@ -30,7 +32,7 @@ private:
     static const std::vector<unsigned> m_rc;
 };
 
-class BLAKE224 final : public _BlakeImpl<uint32_t>
+class BLAKE224 final : public BlakeImpl<uint32_t>
 {
 public:
     TC_API BLAKE224();
@@ -40,7 +42,7 @@ private:
     void reset_subclass() override;
 };
 
-class BLAKE256 final : public _BlakeImpl<uint32_t>
+class BLAKE256 final : public BlakeImpl<uint32_t>
 {
 public:
     TC_API BLAKE256();
@@ -50,7 +52,7 @@ private:
     void reset_subclass() override;
 };
 
-class BLAKE384 final : public _BlakeImpl<uint64_t>
+class BLAKE384 final : public BlakeImpl<uint64_t>
 {
 public:
     TC_API BLAKE384();
@@ -60,7 +62,7 @@ private:
     void reset_subclass() override;
 };
 
-class BLAKE512 final : public _BlakeImpl<uint64_t>
+class BLAKE512 final : public BlakeImpl<uint64_t>
 {
 public:
     TC_API BLAKE512();

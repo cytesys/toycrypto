@@ -27,7 +27,7 @@ void HBase<T, BE>::reset() {
     if (get_digestsize() <= 0)
         throw std::invalid_argument("The digest size must be initialized!");
 
-    if (m_state.size() <= 0)
+    if (m_state.empty())
         throw std::invalid_argument("The internal state must be initialized!");
 
     set_enum(HASH_INIT);
@@ -138,7 +138,7 @@ std::string HBase<T, BE>::hexdigest(size_t len) {
 
     std::string result{};
     const size_t length = (get_xof()) ? len : get_digestsize();
-    unsigned char *buffer = reinterpret_cast<unsigned char*>(
+    auto *buffer = reinterpret_cast<unsigned char*>(
         calloc(length, sizeof(unsigned char))
     );
 

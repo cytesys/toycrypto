@@ -3,8 +3,6 @@
 #ifndef TC_HASHBASE_H
 #define TC_HASHBASE_H
 
-#define __STDC_FORMAT_MACROS
-
 #include <toycrypto/internal/headerstuff.h>
 #include <toycrypto/internal/common.h>
 #include <toycrypto/hash/hash_common.h>
@@ -16,7 +14,7 @@ template<UTYPE T, bool BE>
 class HBase : public HashAPI {
 public:
     // CTor
-    TC_API HBase(size_t blocksize, size_t rate = 0);
+    TC_API explicit HBase(size_t blocksize, size_t rate = 0);
 
     // Resets this HBase instance and calls reset_subclass().
     TC_API void reset() final;
@@ -31,7 +29,7 @@ public:
     TC_API std::string hexdigest(size_t len = 0) final;
 
     // Returns the digest size in bytes.
-    TC_API inline size_t get_digestsize() const { return m_digestsize; }
+    [[nodiscard]] TC_API inline size_t get_digestsize() const { return m_digestsize; }
 
 protected:
     // Resets a subclass. Must be implemented in the subclass itself.
@@ -74,10 +72,10 @@ protected:
     inline void clear_tmp() { _clear_vec(m_tmp); }
 
     // Returns the current message length in bytes.
-    inline size_t get_length() const { return m_length; }
+    [[nodiscard]] inline size_t get_length() const { return m_length; }
 
     // Returns the current message length in bits.
-    inline size_t get_length_bits() const { return m_length << 3; }
+    [[nodiscard]] inline size_t get_length_bits() const { return m_length << 3; }
 
     // Sets the message length to 0.
     inline void clear_length() { m_length = 0; }
@@ -89,13 +87,13 @@ protected:
     inline void inc_length(size_t len) { m_length += len; }
 
     // Returns true if this hash function has an XOF.
-    inline bool get_xof() const { return m_xof; }
+    [[nodiscard]] inline bool get_xof() const { return m_xof; }
 
     // Specifies that this hash function should have an XOF.
     inline void set_xof() { m_xof = true; }
 
     // Returns the current status of this hash function.
-    inline HashEnum get_enum() const { return m_status; }
+    [[nodiscard]] inline HashEnum get_enum() const { return m_status; }
 
     // Sets the current status of this hash function.
     inline void set_enum(HashEnum status) { m_status = status; }
@@ -110,16 +108,16 @@ protected:
     inline void inc_counter(size_t len) { m_counter += len; }
 
     // Returns the current internal counter.
-    inline size_t get_counter() const { return m_counter; }
+    [[nodiscard]] inline size_t get_counter() const { return m_counter; }
 
     // Returns the current block index.
-    inline size_t get_index() const { return m_counter / sizeof(T); }
+    [[nodiscard]] inline size_t get_index() const { return m_counter / sizeof(T); }
 
     // Returns the block rate in bytes.
-    inline size_t get_rate() const { return m_rate; }
+    [[nodiscard]] inline size_t get_rate() const { return m_rate; }
 
     // Returns the
-    inline bool get_final_pad() const { return m_final_is_pad; }
+    [[nodiscard]] inline bool get_final_pad() const { return m_final_is_pad; }
 
     inline void set_final_pad() { m_final_is_pad = true; }
 

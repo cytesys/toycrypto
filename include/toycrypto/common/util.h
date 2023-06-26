@@ -4,9 +4,12 @@
 #define TC_COMMON_UTIL_H
 
 #include <string>
+#include <toycrypto/internal/headerstuff.h>
 
 namespace TC {
-std::string hexdigest(const unsigned char* digest_buffer, size_t digest_len);
+
+TC_API std::string hexdigest(const unsigned char* digest_buffer, size_t digest_len);
+
 }
 
 #endif

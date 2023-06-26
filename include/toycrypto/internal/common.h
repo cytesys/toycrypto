@@ -3,6 +3,7 @@
 #ifndef TC_COMMON_H
 #define TC_COMMON_H
 
+#define __STDC_FORMAT_MACROS
 #include <cstdint>
 #include <iostream>
 #include <array>

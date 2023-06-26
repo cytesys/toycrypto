@@ -28,11 +28,8 @@ Keccak1600::Keccak1600(size_t capacity, uint8_t dsuf, size_t digestsize)
     , m_capacity(capacity)
     , m_dsuf(dsuf)
 {
-    if (capacity <= 0 || capacity >= 200)
+    if (capacity == 0 || capacity >= 200)
         throw std::invalid_argument("Invalid capacity");
-
-    if (digestsize < 0)
-        throw std::invalid_argument("Invalid digest bitlength");
 
     if (digestsize == 0) {
         set_xof();
@@ -63,10 +60,9 @@ void Keccak1600::process_block() {
     unsigned i, x, y, shift;
     uint64_t d, result;
 
-    // XOR the internal state with the block
-    for (i = 0; i < m_state.size(); i++) {
+    // XOR the block with the internal state
+    for (i = 0; i < m_state.size(); i++)
         m_state.at(i) ^= m_block.at(i);
-    }
 
 #if(DEBUG)
     print_state();
@@ -75,10 +71,10 @@ void Keccak1600::process_block() {
     for (i = 0; i < 24; i++) {
         for (x = 0; x < 5; x++) {
             m_tmp.at(x) = m_state.at(lane(x, 0)) ^
-                      m_state.at(lane(x, 1)) ^
-                      m_state.at(lane(x, 2)) ^
-                      m_state.at(lane(x, 3)) ^
-                      m_state.at(lane(x, 4));
+                  m_state.at(lane(x, 1)) ^
+                  m_state.at(lane(x, 2)) ^
+                  m_state.at(lane(x, 3)) ^
+                  m_state.at(lane(x, 4));
         }
 
         for (x = 0; x < 5; x++) {

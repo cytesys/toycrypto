@@ -34,19 +34,19 @@ constexpr std::array<unsigned, 160> BLAKE_SIGMA = {
 };
 
 template<>
-const std::vector<unsigned> _BlakeImpl<uint32_t>::m_rc = {16, 12, 8, 7};
+const std::vector<unsigned> BlakeImpl<uint32_t>::m_rc = {16, 12, 8, 7};
 
 template<>
-const std::vector<uint32_t> _BlakeImpl<uint32_t>::m_k = {
+const std::vector<uint32_t> BlakeImpl<uint32_t>::m_k = {
     0x243f6a88, 0x85a308d3, 0x13198a2e, 0x03707344, 0xa4093822, 0x299f31d0, 0x082efa98, 0xec4e6c89,
     0x452821e6, 0x38d01377, 0xbe5466cf, 0x34e90c6c, 0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5, 0xb5470917
 };
 
 template<>
-const std::vector<unsigned> _BlakeImpl<uint64_t>::m_rc = {32, 25, 16, 11};
+const std::vector<unsigned> BlakeImpl<uint64_t>::m_rc = {32, 25, 16, 11};
 
 template<>
-const std::vector<uint64_t> _BlakeImpl<uint64_t>::m_k = {
+const std::vector<uint64_t> BlakeImpl<uint64_t>::m_k = {
     0x243f6a8885a308d3, 0x13198a2e03707344, 0xa4093822299f31d0, 0x082efa98ec4e6c89,
     0x452821e638d01377, 0xbe5466cf34e90c6c, 0xc0ac29b7c97c50dd, 0x3f84d5b5b5470917,
     0x9216d5d98979fb1b, 0xd1310ba698dfb5ac, 0x2ffd72dbd01adfb7, 0xb8e1afed6a267e96,
@@ -54,31 +54,31 @@ const std::vector<uint64_t> _BlakeImpl<uint64_t>::m_k = {
 };
 
 template<>
-const unsigned _BlakeImpl<uint32_t>::m_rounds = 14;
+const unsigned BlakeImpl<uint32_t>::m_rounds = 14;
 
 template<>
-const unsigned _BlakeImpl<uint64_t>::m_rounds = 16;
+const unsigned BlakeImpl<uint64_t>::m_rounds = 16;
 
 template<UTYPE T>
-_BlakeImpl<T>::_BlakeImpl() {
+BlakeImpl<T>::BlakeImpl() {
     // Default constructor
     throw std::invalid_argument("Blake was instanciated with a wrong type");
 }
 
 template<>
-_BlakeImpl<uint32_t>::_BlakeImpl() : HBase(16) {}
+BlakeImpl<uint32_t>::BlakeImpl() : HBase(16) {}
 
 template<>
-_BlakeImpl<uint64_t>::_BlakeImpl() : HBase(16) {}
+BlakeImpl<uint64_t>::BlakeImpl() : HBase(16) {}
 
 template<UTYPE T>
-void _BlakeImpl<T>::reset_subclass() {
+void BlakeImpl<T>::reset_subclass() {
     this->m_tmp.assign(16, 0);
     m_salt.assign(16 / sizeof(T), 0);
 }
 
 template<UTYPE T>
-void _BlakeImpl<T>::finalize() {
+void BlakeImpl<T>::finalize() {
     if (this->get_digestsize() % 32 == 0)
         this->pad_haifa();
     else
@@ -87,7 +87,7 @@ void _BlakeImpl<T>::finalize() {
 }
 
 template<UTYPE T>
-void _BlakeImpl<T>::set_salt(const char* const salt, const size_t saltlen) {
+void BlakeImpl<T>::set_salt(const char* const salt, const size_t saltlen) {
     if (this->get_enum() > HASH_INIT)
         throw std::invalid_argument("Cannot set salt after update");
 
@@ -103,7 +103,7 @@ void _BlakeImpl<T>::set_salt(const char* const salt, const size_t saltlen) {
 }
 
 template<UTYPE T>
-inline void _BlakeImpl<T>::blake_g(unsigned r, unsigned a, unsigned b, unsigned c, unsigned d, unsigned i) {
+void BlakeImpl<T>::blake_g(unsigned r, unsigned a, unsigned b, unsigned c, unsigned d, unsigned i) {
     T va = this->m_tmp.at(a);
     T vb = this->m_tmp.at(b);
     T vc = this->m_tmp.at(c);
@@ -128,7 +128,7 @@ inline void _BlakeImpl<T>::blake_g(unsigned r, unsigned a, unsigned b, unsigned 
 }
 
 template<UTYPE T>
-void _BlakeImpl<T>::process_block() {
+void BlakeImpl<T>::process_block() {
     unsigned i;
     size_t length = this->get_length_bits();
 
@@ -156,8 +156,6 @@ void _BlakeImpl<T>::process_block() {
             this->m_tmp.at(12) ^= length;
             this->m_tmp.at(13) ^= length;
         }
-    } else {
-        printf("Last block\n");
     }
 
     // The round function
@@ -180,8 +178,8 @@ void _BlakeImpl<T>::process_block() {
     this->clear_block();
 }
 
-template class _BlakeImpl<uint32_t>;
-template class _BlakeImpl<uint64_t>;
+template class BlakeImpl<uint32_t>;
+template class BlakeImpl<uint64_t>;
 
 BLAKE224::BLAKE224() {
     set_digestsize(28);
@@ -190,7 +188,7 @@ BLAKE224::BLAKE224() {
 
 void BLAKE224::reset_subclass() {
     m_state.assign(BLAKE224_IV.begin(), BLAKE224_IV.end());
-    _BlakeImpl::reset_subclass();
+    BlakeImpl::reset_subclass();
 }
 
 BLAKE256::BLAKE256() {
@@ -200,7 +198,7 @@ BLAKE256::BLAKE256() {
 
 void BLAKE256::reset_subclass() {
     m_state.assign(BLAKE256_IV.begin(), BLAKE256_IV.end());
-    _BlakeImpl::reset_subclass();
+    BlakeImpl::reset_subclass();
 }
 
 BLAKE384::BLAKE384() {
@@ -210,7 +208,7 @@ BLAKE384::BLAKE384() {
 
 void BLAKE384::reset_subclass() {
     m_state.assign(BLAKE384_IV.begin(), BLAKE384_IV.end());
-    _BlakeImpl::reset_subclass();
+    BlakeImpl::reset_subclass();
 }
 
 BLAKE512::BLAKE512() {
@@ -220,5 +218,5 @@ BLAKE512::BLAKE512() {
 
 void BLAKE512::reset_subclass() {
     m_state.assign(BLAKE512_IV.begin(), BLAKE512_IV.end());
-    _BlakeImpl::reset_subclass();
+    BlakeImpl::reset_subclass();
 }
