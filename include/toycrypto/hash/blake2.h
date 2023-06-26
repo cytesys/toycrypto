@@ -15,14 +15,14 @@ public:
 
     TC_API void finalize() final;
 
+    [[maybe_unused]] TC_API void set_key(const char* keybuf, size_t keybuflen);
+
 private:
     void process_block() final;
 
     void reset_subclass() final;
 
     inline void blake2_g(unsigned, unsigned, unsigned, unsigned, unsigned, unsigned, unsigned);
-
-    std::vector<T> m_key{};
 
     static const unsigned m_rounds;
     static const std::array<T, 8> &m_k;

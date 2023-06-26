@@ -1,3 +1,5 @@
+#include <span>
+
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/blake2.h>
@@ -67,8 +69,24 @@ void Blake2Impl<T>::reset_subclass() {
     this->m_state.assign(m_k.begin(), m_k.end());
 
     this->m_state.at(0) ^= 0x01010000;
-    this->m_state.at(0) ^= ((m_key.size() & 0xff) << 8);
     this->m_state.at(0) ^= (this->get_digestsize() & 0xff);
+}
+
+template<UTYPE T>
+void Blake2Impl<T>::set_key(const char* const keybuf, const size_t keylen) {
+    if (this->get_enum() > HASH_INIT)
+        throw std::invalid_argument("Cannot set key after update");
+
+    if (keylen > 8 * sizeof(T) || keylen == 0)
+        throw std::invalid_argument("Invalid key length");
+
+    // Update the parameter blocks
+    this->m_state.at(0) ^= ((keylen & 0xff) << 8);
+
+    // Process the key
+    this->update(keybuf, keylen);
+    this->inc_counter(this->get_rate() - keylen);
+    this->inc_length(this->get_rate() - keylen);
 }
 
 template<UTYPE T>
@@ -76,8 +94,9 @@ void Blake2Impl<T>::finalize() {
     if (this->get_enum() >= HASH_FINAL)
         throw std::invalid_argument("Cannot call finalize more than once");
 
+    this->set_enum(HASH_FINAL);
+
     if (this->get_counter() > 0 || this->get_length() == 0) {
-        this->set_enum(HASH_FINAL);
         process_block();
     }
 }
