@@ -1,11 +1,25 @@
-#include <iostream>
+#include <gtest/gtest.h>
 
 #include <toycrypto/hash/blake.h>
 
-int main(int argc, char** argv) {
-    BLAKE256 test{};
+class Blake256SaltedTests : public ::testing::Test {
+protected:
+    void SetUp() override {
+        m_hfun.reset();
+        m_hfun.add_salt(m_salt.c_str(), m_salt.length());
+    }
 
-    const std::array<std::string, 134> cmp = {
+    BLAKE256 m_hfun{};
+
+    std::string m_salt = "whatever";
+
+    const std::string m_empty_digest =
+        "d70b604d1372444aed53f04cc7e828f1f4e82f3ae7714f603fbf8f436796dddf";
+
+    const std::string m_fox_digest =
+        "59b8eb96972b9f48ffa7d8310cda8a85d12e62b7673907923c6a5f89d5ccfb3b";
+
+    const std::array<std::string, 134> m_cmp = {
         "d70b604d1372444aed53f04cc7e828f1f4e82f3ae7714f603fbf8f436796dddf",
         "9cd34825b8b438ac27be9058872e99240d33e8c3d714f2f13d67be9f19a968c3",
         "4505ebd319f12034bd1f7200ca499449152b3d251c46e456d4927727ffdb0f7e",
@@ -142,47 +156,67 @@ int main(int argc, char** argv) {
         "f8ed3d71fa39ab968765ac5da6a846b8d5b3814d56028be5d60efab1e5174eb9"
     };
 
-    std::string salt = "whatever";
+    const std::string m_7000 =
+        "ad9ee4f246aff172e80eebef7ab0be01a19105ce8bf9551dfc7fa258be650ffd";
+};
 
-    std::string dgst{};
-    std::vector<int> fails{};
-    std::vector<int> succs{};
+TEST_F(Blake256SaltedTests, Simple) {
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+}
 
+TEST_F(Blake256SaltedTests, ResetWorks) {
+    EXPECT_NO_THROW(m_hfun.update("Hello", 5));
+    EXPECT_NO_THROW(m_hfun.reset());
+    EXPECT_NO_THROW(m_hfun.add_salt(m_salt.c_str(), m_salt.length()));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_empty_digest);
+}
+
+TEST_F(Blake256SaltedTests, BasicInput) {
+    EXPECT_NO_THROW(m_hfun.update("The quick brown fox jumps over the lazy dog", 43));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+}
+
+TEST_F(Blake256SaltedTests, ChoppedInput) {
+    EXPECT_NO_THROW(m_hfun.update("The quick brown fox ", 20));
+    EXPECT_NO_THROW(m_hfun.update("jumps o", 7));
+    EXPECT_NO_THROW(m_hfun.update("ver the la", 10));
+    EXPECT_NO_THROW(m_hfun.update("zy dog", 6));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_fox_digest);
+}
+
+TEST_F(Blake256SaltedTests, Extensive) {
     int i, j;
-
-    for (i = 0; i < cmp.size(); i++) {
-        test.reset();
-
-        test.add_salt(salt.c_str(), salt.length());
-
+    for (i = 0; i < m_cmp.size(); i++) {
+        EXPECT_NO_THROW(m_hfun.reset());
+        EXPECT_NO_THROW(m_hfun.add_salt(m_salt.c_str(), m_salt.length()));
         for (j = 0; j < i; j++)
-            test.update("A", 1);
-
-        test.finalize();
-
-        dgst = test.hexdigest();
-
-        std::cout << i << ": " << dgst << " ";
-        if (dgst == cmp.at(i)) {
-            succs.push_back(i);
-            std::cout << "OK" << std::endl;
-            continue;
-        }
-
-        fails.push_back(i);
-        std::cout << "Failed!" << std::endl;
-        std::cout << i << ": " << cmp.at(i) << std::endl << std::endl;
+            EXPECT_NO_THROW(m_hfun.update("A", 1));
+        EXPECT_NO_THROW(m_hfun.finalize());
+        EXPECT_EQ(m_hfun.hexdigest(), m_cmp.at(i));
     }
+}
 
-    std::cout << "Succeeded lengths:" << std::endl;
-    for (int s : succs)
-        std::cout << s << " ";
-    std::cout << std::endl;
+TEST_F(Blake256SaltedTests, SevenThousandAs) {
+    int i;
+    for (i = 0; i < 1000; i++)
+        EXPECT_NO_THROW(m_hfun.update("AAAAAAA", 7));
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_EQ(m_hfun.hexdigest(), m_7000);
+}
 
-    std::cout << "Failed lengths:" << std::endl;
-    for (int f : fails)
-        std::cout << f << " ";
-    std::cout << std::endl;
+TEST_F(Blake256SaltedTests, UpdateAfterFinal) {
+    EXPECT_NO_THROW(m_hfun.finalize());
+    EXPECT_THROW(m_hfun.update("Hello", 5), std::invalid_argument);
+}
 
-	return EXIT_SUCCESS;
+TEST_F(Blake256SaltedTests, DigestBeforeFinal) {
+    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
+    EXPECT_NO_THROW(m_hfun.reset());
+
+    EXPECT_NO_THROW(m_hfun.update("Hello", 5));
+    EXPECT_THROW(m_hfun.hexdigest(), std::invalid_argument);
 }

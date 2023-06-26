@@ -1,3 +1,5 @@
+#include <span>
+
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/blake.h>
@@ -74,7 +76,7 @@ BlakeImpl<uint64_t>::BlakeImpl() : HBase(16) {}
 template<UTYPE T>
 void BlakeImpl<T>::reset_subclass() {
     this->m_tmp.assign(16, 0);
-    m_salt.assign(16 / sizeof(T), 0);
+    m_salt.assign(4, 0);
 }
 
 template<UTYPE T>
@@ -87,17 +89,18 @@ void BlakeImpl<T>::finalize() {
 }
 
 template<UTYPE T>
-void BlakeImpl<T>::set_salt(const char* const salt, const size_t saltlen) {
+void BlakeImpl<T>::add_salt(const char* const salt, const size_t saltlen) {
     if (this->get_enum() > HASH_INIT)
         throw std::invalid_argument("Cannot set salt after update");
 
-    if (saltlen > 16)
-        throw std::invalid_argument("Salt must be 16 bytes or less");
+    if (saltlen > (m_salt.size() * sizeof(T)) || saltlen == 0)
+        throw std::invalid_argument("Invalid salt size");
 
-    unsigned offset = 0;
+    unsigned offset = m_salt.size() * sizeof(T) - saltlen;
+    auto sp = std::span(reinterpret_cast<const unsigned char*>(salt), saltlen);
 
-    while (offset < saltlen) {
-        m_salt.at(offset / sizeof(T)) ^= ror_be<T>(salt[offset], offset);
+    for (auto c : sp) {
+        m_salt.at(offset / sizeof(T)) |= ror_be<T>(c, offset);
         offset++;
     }
 }
@@ -140,7 +143,7 @@ void BlakeImpl<T>::process_block() {
         this->m_tmp.at(i) = this->m_state.at(i);
         this->m_tmp.at(i + 8) = m_k.at(i);
         if (i < 4)
-            this->m_tmp.at(i + 8) ^= m_salt.at(i % m_salt.size());
+            this->m_tmp.at(i + 8) ^= m_salt.at(i);
     }
 
     // XOR in the message length in bits unless the current block only consists of padding.

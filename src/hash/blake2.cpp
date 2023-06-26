@@ -1,5 +1,3 @@
-#include <span>
-
 #include <toycrypto/internal/common.h>
 #include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/blake2.h>

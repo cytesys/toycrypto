@@ -1,7 +1,9 @@
 set(TC_HASH_TESTS
     blake224_test.cpp
     blake256_test.cpp
+    blake256_salted_test.cpp
     blake384_test.cpp
+    blake384_salted_test.cpp
     blake512_test.cpp
     blake2s_test.cpp
     blake2s_keyed_test.cpp

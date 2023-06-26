@@ -15,7 +15,7 @@ public:
 
     TC_API void finalize() final;
 
-    [[maybe_unused]] TC_API void set_salt(const char* buffer, size_t buflen);
+    [[maybe_unused]] TC_API void add_salt(const char* buffer, size_t buflen);
 
 protected:
     void reset_subclass() override;
