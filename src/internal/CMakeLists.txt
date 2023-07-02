@@ -3,7 +3,9 @@ set(TC_INTERNAL_SOURCES
 )
 
 set(TC_INTERNAL_HEADERS
+    common.h
     hashbase.h
+    headerstuff.h
 )
 
 list(TRANSFORM TC_INTERNAL_SOURCES PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")

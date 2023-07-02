@@ -1,9 +1,7 @@
 #include <span>
 
 #include <toycrypto/internal/common.h>
-#include <toycrypto/internal/exceptions.h>
 #include <toycrypto/hash/blake.h>
-#include <toycrypto/common/util.h>
 
 // BLAKE initial values
 constexpr std::array<uint32_t, 8> BLAKE224_IV = {

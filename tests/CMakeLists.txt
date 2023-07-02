@@ -21,10 +21,9 @@ set(TC_TESTS
 
 # Make all the tests
 add_executable(unittests ${CMAKE_CURRENT_SOURCE_DIR}/unittests.cpp ${TC_TESTS})
-target_include_directories(unittests PUBLIC ${TC_HDR_DIR})
-target_link_libraries(unittests PRIVATE GTest::GTest toycrypto::toycrypto)
+target_link_libraries(unittests PUBLIC GTest::GTest toycrypto toycrypto_compiler_flags)
 
-if (WIN32)
+if (WIN32 AND BUILD_SHARED_LIBS)
     add_custom_command(
         TARGET unittests POST_BUILD
         COMMAND ${CMAKE_COMMAND}
@@ -34,5 +33,10 @@ if (WIN32)
         COMMAND_EXPAND_LISTS
     )
 endif ()
+
+install(TARGETS gtest_main unittests
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib/gtest)
 
 add_test(unittests_gtests unittests)
