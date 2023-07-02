@@ -111,7 +111,6 @@ void HBase<T, BE>::digest(unsigned char* const output, const size_t outlen) {
     for (unsigned char& c : sp) {
         // Process an empty block when we hit rate
         if (offset % get_rate() == 0 && offset > 0) {
-            printf("Hit rate %lld\n", get_rate());
             process_block();
             offset = 0;
         }
