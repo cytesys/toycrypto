@@ -48,8 +48,6 @@ void MD2::reset_subclass() {
 }
 
 void MD2::finalize() {
-    int i;
-
     if (get_enum() >= HASH_FINAL)
         throw std::invalid_argument("Cannot pad after final block");
 
@@ -59,9 +57,9 @@ void MD2::finalize() {
     }
 
     // Append PKCS#7 padding
-    uint8_t pad = (16 - get_counter()) & 0xff;
-    for (i = get_counter(); i < 16; i++)
-        m_block.at(i) = pad;
+    uint8_t pad = (16 - get_counter());
+    for (int i = get_counter(); i < 16; i++)
+        m_block[i] = pad;
     process_block();
 
     // Process the checksum as well
@@ -75,24 +73,20 @@ void MD2::process_block() {
     unsigned i, j;
     uint8_t a;
 
-#if(DEBUG)
-    print_block();
-
-#endif
     for (i = 0; i < 16; i++) {
-        a = m_block.at(i);
-        m_c.at(i) ^= MD2_SIGMA.at(a ^ m_l);
-        m_l = m_c.at(i);
+        a = m_block[i];
+        m_c[i] ^= MD2_SIGMA[a ^ m_l];
+        m_l = m_c[i];
 
-        m_state.at(16ull + i) = a;
-        m_state.at(32ull + i) = m_state.at(16ull + i) ^ m_state.at(i);
+        m_state[16ull + i] = a;
+        m_state[32ull + i] = m_state[16ull + i] ^ m_state[i];
     }
 
     a = 0;
     for (i = 0; i < 18; i++) {
         for (j = 0; j < 48; j++) {
-            a = m_state.at(j) ^ MD2_SIGMA.at(a);
-            m_state.at(j) = a;
+            a = m_state[j] ^ MD2_SIGMA[a];
+            m_state[j] = a;
         }
         a += i;
     }

@@ -21,27 +21,23 @@ void MD4::finalize() {
 }
 
 void MD4::md4_ff(uint32_t& a, uint32_t b, uint32_t c, uint32_t d, unsigned x, unsigned s) const {
-    a = rol<uint32_t>(a + ((b & c) | ((~b) & d)) + m_block.at(x), s);
+    a = rol(a + ((b & c) | ((~b) & d)) + m_block[x], s);
 }
 
 void MD4::md4_gg(uint32_t& a, uint32_t b, uint32_t c, uint32_t d, unsigned x, unsigned s) const {
-    a = rol<uint32_t>(a + ((b & c) | (b & d) | (c & d)) + m_block.at(x) + 0x5a827999u, s);
+    a = rol(a + ((b & c) | (b & d) | (c & d)) + m_block[x] + 0x5a827999u, s);
 }
 
 void MD4::md4_hh(uint32_t& a, uint32_t b, uint32_t c, uint32_t d, unsigned x, unsigned s) const {
-    a = rol<uint32_t>(a + (b ^ c ^ d) + m_block.at(x) + 0x6ed9eba1u, s);
+    a = rol(a + (b ^ c ^ d) + m_block[x] + 0x6ed9eba1u, s);
 }
 
 void MD4::process_block() {
-    uint32_t a = m_state.at(0),
-        b = m_state.at(1),
-        c = m_state.at(2),
-        d = m_state.at(3);
+    uint32_t a = m_state[0],
+        b = m_state[1],
+        c = m_state[2],
+        d = m_state[3];
 
-#if(DEBUG)
-    print_block();
-
-#endif
     // Round 1
     md4_ff(a, b, c, d, 0, 3);
     md4_ff(d, a, b, c, 1, 7);
@@ -96,10 +92,10 @@ void MD4::process_block() {
     md4_hh(c, d, a, b, 7, 11);
     md4_hh(b, c, d, a, 15, 15);
 
-    m_state.at(0) += a;
-    m_state.at(1) += b;
-    m_state.at(2) += c;
-    m_state.at(3) += d;
+    m_state[0] += a;
+    m_state[1] += b;
+    m_state[2] += c;
+    m_state[3] += d;
 
     clear_block();
 }

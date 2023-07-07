@@ -64,8 +64,8 @@ void Blake2Impl<T>::reset_subclass() {
     this->m_tmp.assign(16, 0);
     this->m_state.assign(m_k.begin(), m_k.end());
 
-    this->m_state.at(0) ^= 0x01010000;
-    this->m_state.at(0) ^= (this->get_digestsize() & 0xff);
+    this->m_state[0] ^= 0x01010000;
+    this->m_state[0] ^= (this->get_digestsize() & 0xff);
 }
 
 template<UTYPE T>
@@ -77,7 +77,7 @@ void Blake2Impl<T>::set_key(const char* const keybuf, const size_t keylen) {
         throw std::invalid_argument("Invalid key length");
 
     // Update the parameter blocks
-    this->m_state.at(0) ^= ((keylen & 0xff) << 8);
+    this->m_state[0] ^= ((keylen & 0xff) << 8);
 
     // Process the key
     this->update(keybuf, keylen);
@@ -99,51 +99,47 @@ void Blake2Impl<T>::finalize() {
 
 template<UTYPE T>
 void Blake2Impl<T>::blake2_g(unsigned i, unsigned a, unsigned b, unsigned c, unsigned d, unsigned x, unsigned y) {
-    T va = this->m_tmp.at(a),
-        vb = this->m_tmp.at(b),
-        vc = this->m_tmp.at(c),
-        vd = this->m_tmp.at(d);
+    T va = this->m_tmp[a],
+        vb = this->m_tmp[b],
+        vc = this->m_tmp[c],
+        vd = this->m_tmp[d];
 
-    T xx = this->m_block.at(BLAKE2_SIGMA.at((i % 10) * 16 + x));
-    T yy = this->m_block.at(BLAKE2_SIGMA.at((i % 10) * 16 + y));
+    T xx = this->m_block[BLAKE2_SIGMA[(i % 10) * 16 + x]];
+    T yy = this->m_block[BLAKE2_SIGMA[(i % 10) * 16 + y]];
 
     va += vb + xx;
-    vd = ror<T>(vd ^ va, m_rc.at(0));
+    vd = ror<T>(vd ^ va, m_rc[0]);
     vc += vd;
-    vb = ror<T>(vb ^ vc, m_rc.at(1));
+    vb = ror<T>(vb ^ vc, m_rc[1]);
     va += vb + yy;
-    vd = ror<T>(vd ^ va, m_rc.at(2));
+    vd = ror<T>(vd ^ va, m_rc[2]);
     vc += vd;
-    vb = ror<T>(vb ^ vc, m_rc.at(3));
+    vb = ror<T>(vb ^ vc, m_rc[3]);
 
-    this->m_tmp.at(a) = va;
-    this->m_tmp.at(b) = vb;
-    this->m_tmp.at(c) = vc;
-    this->m_tmp.at(d) = vd;
+    this->m_tmp[a] = va;
+    this->m_tmp[b] = vb;
+    this->m_tmp[c] = vc;
+    this->m_tmp[d] = vd;
 }
 
 template<UTYPE T>
 void Blake2Impl<T>::process_block() {
     unsigned i;
 
-#if(DEBUG)
-    this->print_block();
-
-#endif
     // Initialize local work vector
     for (i = 0; i < 8; i++) {
-        this->m_tmp.at(i) = this->m_state.at(i);
-        this->m_tmp.at(8 + i) = m_k.at(i);
+        this->m_tmp[i] = this->m_state[i];
+        this->m_tmp[8 + i] = m_k[i];
     }
 
     // Mix in the message length
-    this->m_tmp.at(12) ^= (T)(this->get_length());
+    this->m_tmp[12] ^= (T)(this->get_length());
     if constexpr (std::is_same<T, uint32_t>::value)
-        this->m_tmp.at(13) ^= (T)((this->get_length() >> 32) & 0xffffffff);
+        this->m_tmp[13] ^= (T)((this->get_length() >> 32) & 0xffffffff);
 
     // Complement m_v[14] if this is the final block
     if (this->get_enum() == HASH_FINAL)
-        this->m_tmp.at(14) = ~this->m_tmp.at(14);
+        this->m_tmp[14] = ~this->m_tmp[14];
 
 #if(DEBUG)
     this->print_tmp();
@@ -164,7 +160,7 @@ void Blake2Impl<T>::process_block() {
 
     // Mix the working array into the internal state
     for (i = 0; i < 8; i++)
-        this->m_state.at(i) ^= this->m_tmp.at(i) ^ this->m_tmp.at(8 + i);
+        this->m_state[i] ^= this->m_tmp[i] ^ this->m_tmp[8 + i];
 
     // Empty m_block
     this->clear_block();

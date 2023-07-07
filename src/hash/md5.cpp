@@ -48,17 +48,13 @@ void MD5::finalize() {
 }
 
 void MD5::process_block() {
-    uint32_t a = m_state.at(0),
-        b = m_state.at(1),
-        c = m_state.at(2),
-        d = m_state.at(3),
+    uint32_t a = m_state[0],
+        b = m_state[1],
+        c = m_state[2],
+        d = m_state[3],
         f, g;
     unsigned i;
 
-#if(DEBUG)
-    print_block();
-
-#endif
     for (i = 0; i < 64; i++) {
         if (i < 16) {
             f = (b & c) | ((~b) & d);
@@ -74,17 +70,17 @@ void MD5::process_block() {
             g = (7 * i) % 16;
         }
 
-        f = f + a + MD5_K.at(i) + m_block.at(g);
+        f = f + a + MD5_K[i] + m_block[g];
         a = d;
         d = c;
         c = b;
-        b = b + rol<uint32_t>(f, MD5_SIGMA.at(i));
+        b = b + rol(f, MD5_SIGMA[i]);
     }
 
-    m_state.at(0) += a;
-    m_state.at(1) += b;
-    m_state.at(2) += c;
-    m_state.at(3) += d;
+    m_state[0] += a;
+    m_state[1] += b;
+    m_state[2] += c;
+    m_state[3] += d;
 
     clear_block();
 }

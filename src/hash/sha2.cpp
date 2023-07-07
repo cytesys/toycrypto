@@ -107,43 +107,39 @@ void Sha2Impl<T>::finalize() {
 
 template<UTYPE T>
 void Sha2Impl<T>::process_block() {
-    T a = this->m_state.at(0),
-        b = this->m_state.at(1),
-        c = this->m_state.at(2),
-        d = this->m_state.at(3),
-        e = this->m_state.at(4),
-        f = this->m_state.at(5),
-        g = this->m_state.at(6),
-        h = this->m_state.at(7),
+    T a = this->m_state[0],
+        b = this->m_state[1],
+        c = this->m_state[2],
+        d = this->m_state[3],
+        e = this->m_state[4],
+        f = this->m_state[5],
+        g = this->m_state[6],
+        h = this->m_state[7],
         s0, s1, tmp1, tmp2;
 
     unsigned i;
 
-#if(DEBUG)
-    this->print_block();
-
-#endif
     for (i = 0; i < m_k.size(); i++) {
         if (i < 16) {
             // Copy words from block into working array
-            this->m_tmp.at(i) = this->m_block.at(i);
+            this->m_tmp[i] = this->m_block[i];
         } else {
             // Expand the 16 first bytes of the working array
-            s0 = ror<T>(this->m_tmp.at((-15ll) + i), m_rc.at(0)) ^
-                 ror<T>(this->m_tmp.at((-15ll) + i), m_rc.at(1)) ^
-                 (this->m_tmp.at((-15ll) + i) >> m_rc.at(2));
-            s1 = ror<T>(this->m_tmp.at((-2ll) + i), m_rc.at(3)) ^
-                 ror<T>(this->m_tmp.at((-2ll) + i), m_rc.at(4)) ^
-                 (this->m_tmp.at((-2ll) + i) >> m_rc.at(5));
-            this->m_tmp.at(i) = this->m_tmp.at((-16ll) + i) + s0 + this->m_tmp.at((-7ll) + i) + s1;
+            s0 = ror<T>(this->m_tmp[(-15ll) + i], m_rc[0]) ^
+                 ror<T>(this->m_tmp[(-15ll) + i], m_rc[1]) ^
+                 (this->m_tmp[(-15ll) + i] >> m_rc[2]);
+            s1 = ror<T>(this->m_tmp[(-2ll) + i], m_rc[3]) ^
+                 ror<T>(this->m_tmp[(-2ll) + i], m_rc[4]) ^
+                 (this->m_tmp[(-2ll) + i] >> m_rc[5]);
+            this->m_tmp[i] = this->m_tmp[(-16ll) + i] + s0 + this->m_tmp[(-7ll) + i] + s1;
         }
     }
 
     // Compress
     for (i = 0; i < m_k.size(); i++) {
-        s0 = ror<T>(a, m_rc.at(6)) ^ ror<T>(a, m_rc.at(7)) ^ ror<T>(a, m_rc.at(8));
-        s1 = ror<T>(e, m_rc.at(9)) ^ ror<T>(e, m_rc.at(10)) ^ ror<T>(e, m_rc.at(11));
-        tmp1 = h + s1 + ((e & f) ^ (~e & g)) + m_k.at(i) + this->m_tmp.at(i);
+        s0 = ror<T>(a, m_rc[6]) ^ ror<T>(a, m_rc[7]) ^ ror<T>(a, m_rc[8]);
+        s1 = ror<T>(e, m_rc[9]) ^ ror<T>(e, m_rc[10]) ^ ror<T>(e, m_rc[11]);
+        tmp1 = h + s1 + ((e & f) ^ (~e & g)) + m_k[i] + this->m_tmp[i];
         tmp2 = s0 + ((a & b) ^ (a & c) ^ (b & c));
 
         h = g;
@@ -158,14 +154,14 @@ void Sha2Impl<T>::process_block() {
     }
 
     // Add the compressed chunk to the current hash value
-    this->m_state.at(0) += a;
-    this->m_state.at(1) += b;
-    this->m_state.at(2) += c;
-    this->m_state.at(3) += d;
-    this->m_state.at(4) += e;
-    this->m_state.at(5) += f;
-    this->m_state.at(6) += g;
-    this->m_state.at(7) += h;
+    this->m_state[0] += a;
+    this->m_state[1] += b;
+    this->m_state[2] += c;
+    this->m_state[3] += d;
+    this->m_state[4] += e;
+    this->m_state[5] += f;
+    this->m_state[6] += g;
+    this->m_state[7] += h;
 
     this->clear_block();
 }

@@ -98,34 +98,34 @@ void BlakeImpl<T>::add_salt(const char* const salt, const size_t saltlen) {
     auto sp = std::span(reinterpret_cast<const unsigned char*>(salt), saltlen);
 
     for (auto c : sp) {
-        m_salt.at(offset / sizeof(T)) |= ror_be<T>(c, offset);
+        m_salt[offset / sizeof(T)] |= ror_be<T>(c, offset);
         offset++;
     }
 }
 
 template<UTYPE T>
 void BlakeImpl<T>::blake_g(unsigned r, unsigned a, unsigned b, unsigned c, unsigned d, unsigned i) {
-    T va = this->m_tmp.at(a);
-    T vb = this->m_tmp.at(b);
-    T vc = this->m_tmp.at(c);
-    T vd = this->m_tmp.at(d);
+    T va = this->m_tmp[a];
+    T vb = this->m_tmp[b];
+    T vc = this->m_tmp[c];
+    T vd = this->m_tmp[d];
 
-    unsigned sri = BLAKE_SIGMA.at((r % 10) * 16 + i);
-    unsigned sri1 = BLAKE_SIGMA.at((r % 10) * 16 + i + 1);
+    unsigned sri = BLAKE_SIGMA[(r % 10) * 16 + i];
+    unsigned sri1 = BLAKE_SIGMA[(r % 10) * 16 + i + 1];
 
-    va += vb + (this->m_block.at(sri) ^ m_k.at(sri1));
-    vd = ror<T>(vd ^ va, m_rc.at(0));
+    va += vb + (this->m_block[sri] ^ m_k[sri1]);
+    vd = ror<T>(vd ^ va, m_rc[0]);
     vc += vd;
-    vb = ror<T>(vb ^ vc, m_rc.at(1));
-    va += vb + (this->m_block.at(sri1) ^ m_k.at(sri));
-    vd = ror<T>(vd ^ va, m_rc.at(2));
+    vb = ror<T>(vb ^ vc, m_rc[1]);
+    va += vb + (this->m_block[sri1] ^ m_k[sri]);
+    vd = ror<T>(vd ^ va, m_rc[2]);
     vc += vd;
-    vb = ror<T>(vb ^ vc, m_rc.at(3));
+    vb = ror<T>(vb ^ vc, m_rc[3]);
 
-    this->m_tmp.at(a) = va;
-    this->m_tmp.at(b) = vb;
-    this->m_tmp.at(c) = vc;
-    this->m_tmp.at(d) = vd;
+    this->m_tmp[a] = va;
+    this->m_tmp[b] = vb;
+    this->m_tmp[c] = vc;
+    this->m_tmp[d] = vd;
 }
 
 template<UTYPE T>
@@ -133,29 +133,25 @@ void BlakeImpl<T>::process_block() {
     unsigned i;
     size_t length = this->get_length_bits();
 
-#if(DEBUG)
-    this->print_block();
-
-#endif
     for (i = 0; i < 8; i++) {
-        this->m_tmp.at(i) = this->m_state.at(i);
-        this->m_tmp.at(i + 8) = m_k.at(i);
+        this->m_tmp[i] = this->m_state[i];
+        this->m_tmp[i + 8] = m_k[i];
         if (i < 4)
-            this->m_tmp.at(i + 8) ^= m_salt.at(i);
+            this->m_tmp[i + 8] ^= m_salt[i];
     }
 
     // XOR in the message length in bits unless the current block only consists of padding.
     if (!this->get_final_pad()) {
         if constexpr (std::is_same<T, uint32_t>::value) {
             // 32-bit
-            this->m_tmp.at(12) ^= (length & 0xffffffff);
-            this->m_tmp.at(13) ^= (length & 0xffffffff);
-            this->m_tmp.at(14) ^= ((length >> 32) & 0xffffffff);
-            this->m_tmp.at(15) ^= ((length >> 32) & 0xffffffff);
+            this->m_tmp[12] ^= (length & 0xffffffff);
+            this->m_tmp[13] ^= (length & 0xffffffff);
+            this->m_tmp[14] ^= ((length >> 32) & 0xffffffff);
+            this->m_tmp[15] ^= ((length >> 32) & 0xffffffff);
         } else {
             // 64-bit
-            this->m_tmp.at(12) ^= length;
-            this->m_tmp.at(13) ^= length;
+            this->m_tmp[12] ^= length;
+            this->m_tmp[13] ^= length;
         }
     }
 
@@ -173,8 +169,8 @@ void BlakeImpl<T>::process_block() {
 
     // Store the results in m_h
     for (i = 0; i < 8; i++)
-        this->m_state.at(i) ^=
-            m_salt.at(i % m_salt.size()) ^ this->m_tmp.at(i) ^ this->m_tmp.at(i + 8);
+        this->m_state[i] ^=
+            m_salt[i % m_salt.size()] ^ this->m_tmp[i] ^ this->m_tmp[i + 8];
 
     this->clear_block();
 }

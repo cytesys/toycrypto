@@ -27,26 +27,22 @@ void SHA1::finalize() {
 }
 
 void SHA1::process_block() {
-    uint32_t a = m_state.at(0),
-        b = m_state.at(1),
-        c = m_state.at(2),
-        d = m_state.at(3),
-        e = m_state.at(4),
+    uint32_t a = m_state[0],
+        b = m_state[1],
+        c = m_state[2],
+        d = m_state[3],
+        e = m_state[4],
         f, k, tmp;
 
     unsigned i;
 
-#if(DEBUG)
-    print_block();
-
-#endif
     for (i = 0; i < 80; i++) {
         if (i < 16) {
-            m_tmp.at(i) = m_block.at(i);
+            m_tmp[i] = m_block[i];
         } else {
-            m_tmp.at(i) = rol(
-                m_tmp.at((-3ll) + i) ^ m_tmp.at((-8ll) + i) ^ \
-                m_tmp.at((-14ll) + i) ^ m_tmp.at((-16ll) + i),
+            m_tmp[i] = rol(
+                m_tmp[(-3ll) + i] ^ m_tmp[(-8ll) + i] ^
+                m_tmp[(-14ll) + i] ^ m_tmp[(-16ll) + i],
                 1
             );
         }
@@ -55,19 +51,19 @@ void SHA1::process_block() {
     for (i = 0; i < 80; i++) {
         if (i < 20) {
             f = (b & c) | ((~b) & d);
-            k = SHA1_K.at(0);
+            k = SHA1_K[0];
         } else if (i < 40) {
             f = b ^ c ^ d;
-            k = SHA1_K.at(1);
+            k = SHA1_K[1];
         } else if (i < 60) {
             f = (b & c) | (b & d) | (c & d);
-            k = SHA1_K.at(2);
+            k = SHA1_K[2];
         } else {
             f = b ^ c ^ d;
-            k = SHA1_K.at(3);
+            k = SHA1_K[3];
         }
 
-        tmp = rol(a, 5) + f + e + k + m_tmp.at(i);
+        tmp = rol(a, 5) + f + e + k + m_tmp[i];
         e = d;
         d = c;
         c = rol(b, 30);
@@ -75,11 +71,11 @@ void SHA1::process_block() {
         a = tmp;
     }
 
-    m_state.at(0) += a;
-    m_state.at(1) += b;
-    m_state.at(2) += c;
-    m_state.at(3) += d;
-    m_state.at(4) += e;
+    m_state[0] += a;
+    m_state[1] += b;
+    m_state[2] += c;
+    m_state[3] += d;
+    m_state[4] += e;
 
     clear_block();
 }

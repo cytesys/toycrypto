@@ -19,10 +19,6 @@ private:
 
     void process_block() final;
 
-    static inline uint64_t m_rc(size_t t);
-
-    static inline size_t lane(size_t x, size_t y);
-
     const size_t m_capacity;
     const uint8_t m_dsuf;
 };

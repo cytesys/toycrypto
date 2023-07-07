@@ -48,7 +48,7 @@ template<UTYPE T, bool BE>
 void HBase<T, BE>::_print_vec(const std::vector<T> &vec, const std::string& vecname) {
     fprintf(stderr, "__ %s __\n", vecname.c_str());
     for (int i = 0; i < vec.size(); i++) {
-        fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(vec.at(i)));
+        fprintf(stderr, "%0*" PRIx64 " ", (int)(sizeof(T) << 1), (uint64_t)(vec[i]));
         if ((i + 1) % (16 / sizeof(T)) == 0) fprintf(stderr, "\n");
     }
     fprintf(stderr, "\n");
@@ -75,13 +75,13 @@ void HBase<T, BE>::update(const char* const buffer, const size_t buflen) {
 
         if constexpr (sizeof(T) == 1) {
             // T is just one byte, so rotating is unecessary.
-            m_block.at(get_counter()) = c;
+            m_block[get_counter()] = c;
         } else if constexpr (BE) {
             // Big endian
-            m_block.at(get_index()) |= ror_be(c, get_counter());
+            m_block[get_index()] |= ror_be(c, get_counter());
         } else {
             // Little endian
-            m_block.at(get_index()) |= rol_le(c, get_counter());
+            m_block[get_index()] |= rol_le(c, get_counter());
         }
 
         inc_length();
@@ -107,26 +107,27 @@ void HBase<T, BE>::digest(unsigned char* const output, const size_t outlen) {
     auto sp = std::span(output, outlen);
     size_t offset = 0;
 
-    // Copy every byte fro m_state to output
+    // Copy every byte from the state to the output buffer
     for (unsigned char& c : sp) {
-        // Process an empty block when we hit rate
-        if (offset % get_rate() == 0 && offset > 0) {
-            process_block();
-            offset = 0;
+        if (get_xof()) {
+            // Process an empty block when we hit rate
+            if (offset % get_rate() == 0 && offset > 0) {
+                process_block();
+                offset = 0;
+            }
         }
 
         if constexpr (sizeof(T) == 1) {
             // T is just 1 byte, so rotating is unnecessary.
-            c = m_state.at(offset++);
+            c = m_state[offset];
         } else if constexpr (BE) {
             // Big endian
-            c = rol_be<T>(m_state.at(offset / sizeof(T)), offset) & 0xff;
-            offset++;
+            c = rol_be<T>(m_state[offset / sizeof(T)], offset) & 0xff;
         } else {
             // Little endian
-            c = ror_le<T>(m_state.at(offset / sizeof(T)), offset) & 0xff;
-            offset++;
+            c = ror_le<T>(m_state[offset / sizeof(T)], offset) & 0xff;
         }
+        offset++;
     }
 }
 
@@ -164,10 +165,10 @@ void HBase<T, BE>::pad_byte(uint8_t byte) {
     // Append a padding bit
     if constexpr (BE) {
         // Big endian
-        m_block.at(get_index()) |= ror_be<T>(byte, get_counter());
+        m_block[get_index()] |= ror_be<T>(byte, get_counter());
     } else {
         // Little endian
-        m_block.at(get_index()) |= rol_le<T>(byte, get_counter());
+        m_block[get_index()] |= rol_le<T>(byte, get_counter());
     }
 
     inc_counter();
@@ -184,7 +185,7 @@ void HBase<T, BE>::pad_haifa() {
 
     /* Padding in HAIFA construction (I think) also appends a bit
         right before the message length. */
-    m_block.at((get_rate() / sizeof(T)) - 3) |= 1;
+    m_block[(get_rate() / sizeof(T)) - 3] |= 1;
 }
 
 template<UTYPE T, bool BE>
@@ -214,13 +215,13 @@ void HBase<T, BE>::append_length() {
 
     // Append the message length in bits
     if constexpr (BE) {
-        m_block.at(m_blocksize - 1) = (T)length;
+        m_block[m_blocksize - 1] = (T)length;
         if constexpr (sizeof(T) == 4) // See the note above
-            m_block.at(m_blocksize - 2) = (T)(length >> 32);
+            m_block[m_blocksize - 2] = (T)(length >> 32);
     } else {
-        m_block.at(m_blocksize - 2) = (T)length;
+        m_block[m_blocksize - 2] = (T)length;
         if constexpr (sizeof(T) == 4) // See the note above
-            m_block.at(m_blocksize - 1) = (T)(length >> 32);
+            m_block[m_blocksize - 1] = (T)(length >> 32);
     }
 
     set_enum(HASH_FINAL);
